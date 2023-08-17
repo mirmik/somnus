@@ -27,6 +27,7 @@ send_settings.ndi_name = 'ndi-python'
 ndi_send = ndi.send_create(send_settings)
 ndi_video_frame = ndi.VideoFrameV2()
 
+
 class VideoTransformTrack(MediaStreamTrack):
     """
     A video stream track that transforms frames from an another track.
@@ -173,11 +174,11 @@ async def offer(request):
             print("VIDEO")
             pc.addTrack(
                 VideoTransformTrack(
-                    relay.subscribe(track), transform=params["video_transform"]
+                    relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
             )
             if args.record_to:
-                recorder.addTrack(relay.subscribe(track))
+                recorder.addTrack(relay.subscribe(track, buffered=True))
 
         @track.on("ended")
         async def on_ended():
