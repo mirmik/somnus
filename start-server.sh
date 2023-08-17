@@ -1,0 +1,1 @@
+python3 src/server.py --cert-file cert.pem --key-file key.pem
