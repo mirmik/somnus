@@ -1,3 +1,12 @@
+// peer connection
+var pc = null;
+
+var dataChannelLog = document.getElementById('data-channel'),
+iceConnectionLog = document.getElementById('ice-connection-state'),
+iceGatheringLog = document.getElementById('ice-gathering-state'),
+signalingLog = document.getElementById('signaling-state');
+
+
 // // get DOM elements
 // var dataChannelLog = document.getElementById('data-channel'),
 //     iceConnectionLog = document.getElementById('ice-connection-state'),
@@ -48,59 +57,68 @@
 //     return pc;
 // }
 
-// function negotiate() {
-//     return pc.createOffer().then(function(offer) {
-//         return pc.setLocalDescription(offer);
-//     }).then(function() {
-//         // wait for ICE gathering to complete
-//         return new Promise(function(resolve) {
-//             if (pc.iceGatheringState === 'complete') {
-//                 resolve();
-//             } else {
-//                 function checkState() {
-//                     if (pc.iceGatheringState === 'complete') {
-//                         pc.removeEventListener('icegatheringstatechange', checkState);
-//                         resolve();
-//                     }
-//                 }
-//                 pc.addEventListener('icegatheringstatechange', checkState);
-//             }
-//         });
-//     }).then(function() {
-//         var offer = pc.localDescription;
-//         var codec;
+function negotiate() {
+    return pc.createOffer().then(function(offer) {
+        return pc.setLocalDescription(offer);
+    }).then(function() {
+        // wait for ICE gathering to complete
+        console.log("HERE0")
+        return new Promise(function(resolve) {
+            console.log(pc.iceGatheringState)
+            if (pc.iceGatheringState === 'complete') {
+                console.log("HERE01")
+                resolve();
+            } else {
+                console.log("HERE02")
+                function checkState() {
+                    console.log("HERE03")
+                    if (pc.iceGatheringState === 'complete') {
+                        console.log("HERE04")
+                        pc.removeEventListener('icegatheringstatechange', checkState);
+                        resolve();
+                    }
+                }
+                console.log("HERE05")
+                pc.addEventListener('icegatheringstatechange', checkState);
+            }
+        });
+    }).then(function() {
+        console.log("HERE1")
+        var offer = pc.localDescription;
+        var codec;
 
-//         codec = document.getElementById('audio-codec').value;
-//         if (codec !== 'default') {
-//             offer.sdp = sdpFilterCodec('audio', codec, offer.sdp);
-//         }
+        // codec = document.getElementById('audio-codec').value;
+        // if (codec !== 'default') {
+        //     offer.sdp = sdpFilterCodec('audio', codec, offer.sdp);
+        // }
 
-//         codec = document.getElementById('video-codec').value;
-//         if (codec !== 'default') {
-//             offer.sdp = sdpFilterCodec('video', codec, offer.sdp);
-//         }
+        // codec = document.getElementById('video-codec').value;
+        // if (codec !== 'default') {
+        //     offer.sdp = sdpFilterCodec('video', codec, offer.sdp);
+        // }
 
-//         document.getElementById('offer-sdp').textContent = offer.sdp;
-//         return fetch('/offer', {
-//             body: JSON.stringify({
-//                 sdp: offer.sdp,
-//                 type: offer.type,
-//                 video_transform: document.getElementById('video-transform').value
-//             }),
-//             headers: {
-//                 'Content-Type': 'application/json'
-//             },
-//             method: 'POST'
-//         });
-//     }).then(function(response) {
-//         return response.json();
-//     }).then(function(answer) {
-//         document.getElementById('answer-sdp').textContent = answer.sdp;
-//         return pc.setRemoteDescription(answer);
-//     }).catch(function(e) {
-//         alert(e);
-//     });
-// }
+        document.getElementById('offer-sdp').textContent = offer.sdp;
+        return fetch('/offer', {
+            body: JSON.stringify({
+                sdp: offer.sdp,
+                type: offer.type,
+                video_transform:  "none"
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            method: 'POST'
+        });
+    }).then(function(response) {
+        return response.json();
+    }).then(function(answer) {
+        console.log("ANSWER")        
+        document.getElementById('answer-sdp').textContent = answer.sdp;
+        return pc.setRemoteDescription(answer);
+    }).catch(function(e) {
+        alert(e);
+    });
+}
 
 // function start() {
 //     document.getElementById('start').style.display = 'none';
@@ -270,12 +288,6 @@
 //     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 // }
 
-// var dataChannelLog = document.getElementById('data-channel'),
-iceConnectionLog = document.getElementById('ice-connection-state'),
-iceGatheringLog = document.getElementById('ice-gathering-state'),
-signalingLog = document.getElementById('signaling-state');
-
-
 
 function test_start() 
 {
@@ -298,33 +310,38 @@ function createPeerConnection() {
         sdpSemantics: 'unified-plan',
         iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
     };
+    config.iceServers = [{urls: ['stun:stun.l.google.com:19302']}];
         
 
     pc = new RTCPeerConnection(config);
 
     // register some listeners to help debugging
     pc.addEventListener('icegatheringstatechange', function() {
+        console.log("icegatheringstatechange")
         iceGatheringLog.textContent += ' -> ' + pc.iceGatheringState;
     }, false);
     iceGatheringLog.textContent = pc.iceGatheringState;
 
     pc.addEventListener('iceconnectionstatechange', function() {
+        console.log("iceconnectionstatechange")
         iceConnectionLog.textContent += ' -> ' + pc.iceConnectionState;
     }, false);
     iceConnectionLog.textContent = pc.iceConnectionState;
 
     pc.addEventListener('signalingstatechange', function() {
+        console.log("signalingstatechange")
         signalingLog.textContent += ' -> ' + pc.signalingState;
     }, false);
     signalingLog.textContent = pc.signalingState;
 
     // connect audio / video
-    //pc.addEventListener('track', function(evt) {
+    pc.addEventListener('track', function(evt) {
+        console.log("TRACK")
     //    if (evt.track.kind == 'video')
     //        document.getElementById('video').srcObject = evt.streams[0];
     //    else
     //        document.getElementById('audio').srcObject = evt.streams[0];
-    //});
+    });
 
     return pc;
 }
@@ -340,6 +357,9 @@ function start()
     };
     navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
         document.getElementById('video').srcObject = stream;
-
+        stream.getTracks().forEach(function(track) {
+            pc.addTrack(track, stream);
+        });
+        negotiate()
     });
 }
