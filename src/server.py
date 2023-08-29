@@ -136,11 +136,11 @@ class VideoTransformTrack(MediaStreamTrack):
             print("VideoTransformTrack inited")
 
         frame = await self.track.recv()
-        img = frame.to_ndarray(format="bgr24")
-        img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
-        ndi_video_frame.data = img
-        ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_RGBX
-        ndi.send_send_video_v2(ndi_send, ndi_video_frame)
+        #img = frame.to_ndarray(format="bgr24")
+        #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
+        #ndi_video_frame.data = img
+        #ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_RGBX
+        #ndi.send_send_video_v2(ndi_send, ndi_video_frame)
         return frame
 
 async def index(request):

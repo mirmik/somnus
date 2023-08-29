@@ -166,8 +166,8 @@ function start()
     var constraints = {
         audio: false,
         video: {
-            width: 320,
-            height: 240
+            width: 640,
+            height: 480
         }
     };
     supportedConstrains = navigator.mediaDevices.getSupportedConstraints()
