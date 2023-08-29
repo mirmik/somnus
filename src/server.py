@@ -22,13 +22,17 @@ import numpy as np
 import cv2 as cv
 import NDIlib as ndi
 
+VIDEO_TRACKS = set()
+SERVER_MESSAGE_LISTENERS = set()
+REMOTE_TRACKS = list()
+
 class Client:
     def __init__(self, pc):
         self.pc = pc
     
     def video_sender(self):
         senders = self.pc.getSenders()
-        vs = senders.find(lambda s: s.track.kind == "video")
+        vs = [s for s in senders if s.track.kind == "video"][0]
         return vs
 
 
@@ -51,29 +55,27 @@ send_settings.ndi_name = 'ndi-python'
 ndi_send = ndi.send_create(send_settings)
 ndi_video_frame = ndi.VideoFrameV2()
 
-VIDEO_TRACKS = set()
-SERVER_MESSAGE_LISTENERS = set()
-
 class FlagVideoStreamTrack(VideoStreamTrack):
     """
     A video track that returns an animated flag.
     """
 
-    def __init__(self):
+    def __init__(self, colors):
         super().__init__()  # don't forget this!
         self.counter = 0
         height, width = 480, 640
+        self.label = "LABEL FLAG"
 
         # generate flag
         data_bgr = numpy.hstack(
             [
                 self._create_rectangle(
-                    width=213, height=480, color=(255, 0, 0)
+                    width=213, height=480, color=colors[0]
                 ),  # blue
                 self._create_rectangle(
-                    width=214, height=480, color=(255, 255, 255)
+                    width=214, height=480, color=colors[1]
                 ),  # white
-                self._create_rectangle(width=213, height=480, color=(0, 0, 255)),  # red
+                self._create_rectangle(width=213, height=480, color=colors[2]),  # red
             ]
         )
 
@@ -152,12 +154,21 @@ async def javascript(request):
     content = open(os.path.join(ROOT, "client.js"), "r").read()
     return web.Response(content_type="application/javascript", text=content)
 
-def on_datachannel_handler(channel):
+rgb_flag = FlagVideoStreamTrack(
+                [(255,0,0), (0,255,0), (0,0,255)]
+            )
+
+def on_datachannel_handler(channel, pc):
     print("DATACHANNEL", channel.label)
 
     if channel.label == "server-message":
         SERVER_MESSAGE_LISTENERS.add(channel)
-
+        @channel.on("message")
+        def on_message(message):
+            print("REMOTE_COMMAND:", message)
+            client = client_of_pc(pc)
+            video_sender = client.video_sender()
+            video_sender.replaceTrack(REMOTE_TRACKS[0])
     else:
         @channel.on("message")
         def on_message(message):
@@ -190,6 +201,7 @@ async def offer(request):
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
     pc = RTCPeerConnection()
+    
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     clients.add(Client(pc))
 
@@ -198,9 +210,14 @@ async def offer(request):
 
     log_info("Created for %s", request.remote)
 
+    flag_track = FlagVideoStreamTrack(
+        [(0,255,255),(255,0,255), (255,255,0)]
+    )
+    flag_sender = pc.addTrack(flag_track)
+    
     @pc.on("datachannel")
     def on_datachannel(channel):
-        on_datachannel_handler(channel)
+        on_datachannel_handler(channel, pc)
         #pc.addTrack(FlagVideoStreamTrack())
     
 
@@ -226,10 +243,13 @@ async def offer(request):
             print("ADD NEW TRACK")
             #VIDEO_TRACKS.add(track)
             #asyncio.ensure_future(track_list_updated())
-            obj = pc.addTrack(
-                VideoTransformTrack(
+            
+            TRANSFORM_TRACK = VideoTransformTrack(
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
+            REMOTE_TRACKS.append(TRANSFORM_TRACK)
+            obj = pc.addTrack(
+                TRANSFORM_TRACK
             )
             print(obj)
 
@@ -297,12 +317,12 @@ async def main():
     app.router.add_post("/offer", offer)
     
     
-    async def async_send_server_message():
-        while True:
-            await control_message("HelloWorld")
-            await asyncio.sleep(1)
+    #async def async_send_server_message():
+    #    while True:
+    #        await control_message("HelloWorld")
+    #        await asyncio.sleep(1)
 
-    sender_task = async_send_server_message()
+    #sender_task = async_send_server_message()
     web_server_task = web._run_app(
         app, 
         access_log=None, 
@@ -313,7 +333,7 @@ async def main():
 
     await asyncio.gather(
         web_server_task,
-        sender_task
+    #    sender_task
     )
 
 if __name__ == "__main__":

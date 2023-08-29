@@ -8,8 +8,10 @@ var iceGatheringLog = document.getElementById('ice-gathering-state')
 var signalingLog = document.getElementById('signaling-state')
 
 let WITHOUT_VIDEO = true;
+var DATACHANNEL = null
 
 function negotiate() {
+    pc.addTransceiver('video', {direction: 'recvonly'});
     return pc.createOffer().then(function(offer) {
         return pc.setLocalDescription(offer);
     }).then(function() {
@@ -55,23 +57,6 @@ function negotiate() {
     });
 }
 
-
-
-function test_start() 
-{
-    console.log("test_start")
-    var constraints = {
-        audio: false,
-        video: true
-    };
-    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-        document.getElementById('video').srcObject = stream;
-    });
-}
-
-
-
-
 function createPeerConnection() {
     var config = {
         sdpSemantics: 'unified-plan',
@@ -104,10 +89,11 @@ function createPeerConnection() {
     // connect audio / video
     pc.addEventListener('track', function(evt) {
         console.log("TRACK")
-    //    if (evt.track.kind == 'video')
-    //        document.getElementById('video').srcObject = evt.streams[0];
-    //    else
-    //        document.getElementById('audio').srcObject = evt.streams[0];
+        console.log(evt)
+        if (evt.track.kind == 'video')
+            document.getElementById('video').srcObject = evt.streams[0];
+        else
+            document.getElementById('audio').srcObject = evt.streams[0];
     });
 
     return pc;
@@ -124,11 +110,21 @@ function current_stamp() {
     }
 }
 
+function send_command(txt) 
+{
+    console.log("COMMAND:")
+    console.log(txt)
+    DATACHANNEL.send(txt)
+}
+
+function command()
+{
+    send_command("hello")
+}
+
 function start() 
 {
     pc = createPeerConnection();    
-
-
     if (true) {
         //var parameters = JSON.parse(document.getElementById('datachannel-parameters').value);
         var parameters = {}
@@ -163,19 +159,26 @@ function start()
         server_mc.onmessage = function(evt) {
             systemChannelLog.textContent += '< ' + evt.data + '\n';
         };
+        DATACHANNEL = server_mc
     }    
 
     console.log("start")
     var constraints = {
         audio: false,
-        video: true
+        video: {
+            width: 320,
+            height: 240
+        }
     };
+    supportedConstrains = navigator.mediaDevices.getSupportedConstraints()
+    console.log(supportedConstrains)
     navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {        
        if (!WITHOUT_VIDEO)
            document.getElementById('video').srcObject = stream;
        stream.getTracks().forEach(function(track) {
            console.log("ADD TRACK")
-           pc.addTrack(track, stream);
+           sender = pc.addTrack(track, stream);
+           console.log(sender)
        });
        negotiate()   
     });     
