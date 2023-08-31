@@ -119,7 +119,11 @@ function send_command(txt)
 
 function command()
 {
-    send_command("hello")
+    dct = {
+        "cmd" : "set_video",
+        "identifier" : "1"
+    }
+    send_command(JSON.stringify(dct))
 }
 
 function start() 

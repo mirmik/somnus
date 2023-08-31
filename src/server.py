@@ -17,6 +17,7 @@ import aiortc
 from aiortc import MediaStreamTrack, VideoStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
 from av import VideoFrame
+import json
 
 import numpy as np
 import cv2 as cv
@@ -26,34 +27,105 @@ VIDEO_TRACKS = set()
 SERVER_MESSAGE_LISTENERS = set()
 REMOTE_TRACKS = list()
 
+IDCOUNTER = 0
+
+def generate_uniqueid():
+    global IDCOUNTER
+    IDCOUNTER += 1
+    return IDCOUNTER
+
+class ClientsCollection:
+    clients = {}
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def add_client(cls, client):
+        cls.clients[client.unique_id()] = client
+
+    @classmethod
+    def identifier_list(cls):
+        idslist = list(cls.clients.keys())
+        return idslist
+    
+    @classmethod
+    def client_for_pc(cls, pc):
+        for cl in cls.clients.values():
+            if cl.pc is pc:
+                return cl
+        return None
+    
+    @classmethod
+    def discard(cls, client):
+        cls.clients.discard(client)
+
+    @classmethod
+    def client_for_id(cls, iden):
+        return cls.clients[int(iden)]
+
 class Client:
     def __init__(self, pc):
         self.pc = pc
-    
+        self.uniqid = generate_uniqueid()
+        self._video_track = None
+
+    def set_video_track(self, track):
+        self._video_track = track
+
     def video_sender(self):
         senders = self.pc.getSenders()
         vs = [s for s in senders if s.track.kind == "video"][0]
         return vs
 
+    def video_track(self):
+        return self._video_track
+
+    def unique_id(self):
+        return self.uniqid
+
+    def set_datachannel(self, dc):
+        self.datachannel = dc
+
+    def send_command(self, msg):
+        self.datachannel.send(msg)
+
+    def set_videotrack_for_identifier(self, iden):
+        video_cl = ClientsCollection.client_for_id(iden)
+        print("video client", video_cl)
+        track = video_cl.video_track()
+        print("video track", track)
+        self.video_sender().replaceTrack(video_cl.video_track())
+
+    def on_command_message(self, msg):
+        print("ExtrnalCommand:", msg)
+        dct = json.loads(msg)
+        cmd  = dct["cmd"]
+        if cmd == "set_video":
+            self.set_videotrack_for_identifier(dct["identifier"])
+
+    def anounce(self):
+        self.anounce_existance_video()
+
+    def anounce_existance_video(self):
+        idslist = ClientsCollection.identifier_list()
+        msgdct = {
+            "cmd" : "anounce_video_list",
+            "identifiers" : idslist 
+        }
+        self.send_command(json.dumps(msgdct)) 
 
 ROOT = os.path.dirname(__file__)
 
 logger = logging.getLogger("pc")
-#pcs = set()
-
-clients = set()
-
-def client_of_pc(pc):
-    for c in clients:
-        if c.pc is pc:
-            return c 
+#pcs = set() 
 
 relay = MediaRelay()
 
-send_settings = ndi.SendCreate()
-send_settings.ndi_name = 'ndi-python'
-ndi_send = ndi.send_create(send_settings)
-ndi_video_frame = ndi.VideoFrameV2()
+#send_settings = ndi.SendCreate()
+#send_settings.ndi_name = 'ndi-python'
+#ndi_send = ndi.send_create(send_settings)
+#ndi_video_frame = ndi.VideoFrameV2()
 
 class FlagVideoStreamTrack(VideoStreamTrack):
     """
@@ -136,11 +208,11 @@ class VideoTransformTrack(MediaStreamTrack):
             print("VideoTransformTrack inited")
 
         frame = await self.track.recv()
-        img = frame.to_ndarray(format="bgr24")
-        img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
-        ndi_video_frame.data = img
-        ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_RGBX
-        ndi.send_send_video_v2(ndi_send, ndi_video_frame)
+        #img = frame.to_ndarray(format="bgr24")
+        #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
+        #ndi_video_frame.data = img
+        #ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_RGBX
+        #ndi.send_send_video_v2(ndi_send, ndi_video_frame)
         return frame
 
 async def index(request):
@@ -158,17 +230,18 @@ rgb_flag = FlagVideoStreamTrack(
                 [(255,0,0), (0,255,0), (0,0,255)]
             )
 
-def on_datachannel_handler(channel, pc):
+def on_datachannel_handler(channel, pc, client):
     print("DATACHANNEL", channel.label)
 
     if channel.label == "server-message":
         SERVER_MESSAGE_LISTENERS.add(channel)
-        @channel.on("message")
+        client.set_datachannel(channel)
+        client.anounce()
+
+        @channel.on("message")        
         def on_message(message):
-            print("REMOTE_COMMAND:", message)
-            client = client_of_pc(pc)
-            video_sender = client.video_sender()
-            video_sender.replaceTrack(REMOTE_TRACKS[0])
+            client.on_command_message(message)
+        
     else:
         @channel.on("message")
         def on_message(message):
@@ -203,7 +276,8 @@ async def offer(request):
     pc = RTCPeerConnection()
     
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
-    clients.add(Client(pc))
+    client = Client(pc)
+    ClientsCollection.add_client(client)
 
     def log_info(msg, *args):
         logger.info(pc_id + " " + msg, *args)
@@ -217,7 +291,7 @@ async def offer(request):
     
     @pc.on("datachannel")
     def on_datachannel(channel):
-        on_datachannel_handler(channel, pc)
+        on_datachannel_handler(channel, pc, client)
         #pc.addTrack(FlagVideoStreamTrack())
     
 
@@ -227,8 +301,8 @@ async def offer(request):
         log_info("Connection state is %s", pc.connectionState)
         if pc.connectionState == "failed":
             await pc.close()
-            client = client_of_pc(pc)
-            clients.discard(client)
+            client = ClientsCollection.client_for_pc(pc)
+            ClientsCollection.discard(client)
 
     recorder = MediaBlackhole()
     @pc.on("track")
@@ -247,6 +321,8 @@ async def offer(request):
             TRANSFORM_TRACK = VideoTransformTrack(
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
+            client.set_video_track(TRANSFORM_TRACK)
+            
             REMOTE_TRACKS.append(TRANSFORM_TRACK)
             obj = pc.addTrack(
                 TRANSFORM_TRACK
