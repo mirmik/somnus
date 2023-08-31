@@ -249,52 +249,52 @@ var mid;
 
 function FindMaximum_WidthHeight_ForCamera()
 {
-console.log("left:right = ", left, ":", right);
-if(left > right)
-{
-console.log("Selected Height:Width = ", selectedWidth, ":", selectedHeight);
-return;
-}
+    //console.log("left:right = ", left, ":", right);
+    if(left > right)
+    {
+        console.log("Selected Height:Width = ", selectedWidth, ":", selectedHeight);
+        return;
+    }
 
-mid = Math.floor((left + right) / 2);
+    mid = Math.floor((left + right) / 2);
 
-var temporaryConstraints = {
-"audio": true,
-"video": {
-"mandatory": {
-"minWidth": ResolutionsToCheck[mid].width,
-"minHeight": ResolutionsToCheck[mid].height,
-"maxWidth": ResolutionsToCheck[mid].width,
-"maxHeight": ResolutionsToCheck[mid].height
-},
-"optional": []
-}
-}
+    var temporaryConstraints = {
+        "audio": true,
+        "video": {
+        "mandatory": {
+            "minWidth": ResolutionsToCheck[mid].width,
+            "minHeight": ResolutionsToCheck[mid].height,
+            "maxWidth": ResolutionsToCheck[mid].width,
+            "maxHeight": ResolutionsToCheck[mid].height
+            },
+            "optional": []
+        }
+    }
 
-navigator.mediaDevices.getUserMedia(temporaryConstraints).then(checkSuccess).catch(checkError);
+    navigator.mediaDevices.getUserMedia(temporaryConstraints).then(checkSuccess).catch(checkError);
 }
 
 function checkSuccess(stream)
 {
-console.log("Success for --> " , mid , " ", ResolutionsToCheck[mid]);
-selectedWidth = ResolutionsToCheck[mid].width;
-selectedHeight = ResolutionsToCheck[mid].height;
+    console.log("Success for --> " , mid , " ", ResolutionsToCheck[mid]);
+    selectedWidth = ResolutionsToCheck[mid].width;
+    selectedHeight = ResolutionsToCheck[mid].height;
 
-left = mid+1;
+    left = mid+1;
 
-for (let track of stream.getTracks()) 
-{ 
-track.stop()
+    for (let track of stream.getTracks()) 
+    { 
+        track.stop()
+    }
+
+    FindMaximum_WidthHeight_ForCamera();
 }
 
-FindMaximum_WidthHeight_ForCamera();
-}
 function checkError(error)
 {
-console.log("Failed for --> " + mid , " ", ResolutionsToCheck[mid],  " ", error);
-right = mid-1;
-
-FindMaximum_WidthHeight_ForCamera();
+    console.log("Failed for --> " + mid , " ", ResolutionsToCheck[mid],  " ", error);
+    right = mid-1;
+    FindMaximum_WidthHeight_ForCamera();
 }
 
 console.log("HEERERERER")
