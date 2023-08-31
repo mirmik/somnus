@@ -5,6 +5,7 @@ import logging
 import os
 import ssl
 import uuid
+import traceback
 
 import threading
 
@@ -55,10 +56,43 @@ class ClientsCollection:
             if cl.pc is pc:
                 return cl
         return None
+
+    @classmethod
+    def clear(cls):
+        cls.clients.clear()
+
+    @classmethod
+    def send_chat_message(cls, fromid, message):
+        for cl in cls.clients.values():
+            cl.send_chat_message(fromid, message)
+
+    @classmethod
+    def send_system_chat_message(cls, message):
+        for cl in cls.clients.values():
+            cl.send_chat_message("__SYSTEM__", message)
+
+    #@classmethod
+    #def anounce_video_tracks(cls):
+    #    for cl in cls.clients.values():
+    #        cl.anounce_existance_video()
     
     @classmethod
+    def anounce(cls):
+        todel = []
+        for idx in cls.clients:
+            try:
+                cls.clients[idx].anounce()
+            except: 
+                print("Exception in the client:", traceback.format_exc)
+                todel.append(idx)
+
+        for idx in todel:    
+            del cls.clients[idx]
+        
+    @classmethod
     def discard(cls, client):
-        cls.clients.discard(client)
+        if client.unique_id() in cls.clients:
+            del cls.clients[client.unique_id()]
 
     @classmethod
     def client_for_id(cls, iden):
@@ -69,6 +103,22 @@ class Client:
         self.pc = pc
         self.uniqid = generate_uniqueid()
         self._video_track = None
+
+    def send_chat_message(self, fromid, message):
+        msgdct = {
+            "cmd" : "chat_message",
+            "identifier" : fromid,
+            "data" : message 
+        }
+        self.send_command(json.dumps(msgdct)) 
+
+    def send_unique_id(self):
+        msgdct = {
+            "cmd" : "set_unique_id",
+            "identifier" : self.unique_id() 
+        }
+        self.send_command(json.dumps(msgdct)) 
+
 
     def set_video_track(self, track):
         self._video_track = track
@@ -91,11 +141,14 @@ class Client:
         self.datachannel.send(msg)
 
     def set_videotrack_for_identifier(self, iden):
-        video_cl = ClientsCollection.client_for_id(iden)
-        print("video client", video_cl)
-        track = video_cl.video_track()
-        print("video track", track)
-        self.video_sender().replaceTrack(video_cl.video_track())
+        try:
+            video_cl = ClientsCollection.client_for_id(iden)
+            track = video_cl.video_track()
+            self.video_sender().replaceTrack(video_cl.video_track())
+        except KeyError as err:
+            print("Key is not found:", iden)
+        except:
+            print(traceback.format_exc())
 
     def on_command_message(self, msg):
         print("ExtrnalCommand:", msg)
@@ -103,6 +156,9 @@ class Client:
         cmd  = dct["cmd"]
         if cmd == "set_video":
             self.set_videotrack_for_identifier(dct["identifier"])
+        
+        if cmd == "chat_message":
+            ClientsCollection.send_chat_message(self.unique_id(), dct["data"])
 
     def anounce(self):
         self.anounce_existance_video()
@@ -236,7 +292,9 @@ def on_datachannel_handler(channel, pc, client):
     if channel.label == "server-message":
         SERVER_MESSAGE_LISTENERS.add(channel)
         client.set_datachannel(channel)
-        client.anounce()
+        ClientsCollection.anounce()
+        client.send_unique_id()
+        ClientsCollection.send_system_chat_message("Новый клиент")
 
         @channel.on("message")        
         def on_message(message):
@@ -248,24 +306,6 @@ def on_datachannel_handler(channel, pc, client):
             if isinstance(message, str) and message.startswith("ping"):
                 channel.send("pong" + message[4:])
 
-    asyncio.ensure_future(track_list_updated())
-
-
-async def control_message(msg):
-    print("CONTROL_MESSAGE", msg, len(SERVER_MESSAGE_LISTENERS))
-    to_remove = []
-    for channel in SERVER_MESSAGE_LISTENERS:
-        try:
-            channel.send("HelloWorld")
-        except aiortc.exceptions.InvalidStateError:
-            to_remove.append(channel)
-    for ch in to_remove:
-        SERVER_MESSAGE_LISTENERS.remove(ch)
-            
-
-async def track_list_updated():
-    print("TRACK LIST UPDATED")
-    await control_message("Control Message")
 
 
 async def offer(request):
@@ -281,8 +321,6 @@ async def offer(request):
 
     def log_info(msg, *args):
         logger.info(pc_id + " " + msg, *args)
-
-    log_info("Created for %s", request.remote)
 
     flag_track = FlagVideoStreamTrack(
         [(0,255,255),(255,0,255), (255,255,0)]
@@ -313,11 +351,7 @@ async def offer(request):
         if track.kind == "audio":
             pass
         #    pc.addTrack(player.audio)
-        elif track.kind == "video":
-            print("ADD NEW TRACK")
-            #VIDEO_TRACKS.add(track)
-            #asyncio.ensure_future(track_list_updated())
-            
+        elif track.kind == "video":           
             TRANSFORM_TRACK = VideoTransformTrack(
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
@@ -355,9 +389,9 @@ async def offer(request):
 async def on_shutdown(app):
     # close peer connections
     print("SHUTDOWN")
-    coros = [pc.close() for pc in pcs]
+    coros = [cl.pc.close() for cl in ClientsCollection.clients]
     await asyncio.gather(*coros)
-    pcs.clear()
+    ClientsCollection.clear()
 
 async def main():
     parser = argparse.ArgumentParser(

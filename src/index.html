@@ -29,21 +29,28 @@
 </head>
 
 <body>
-
-    <button id="start" onclick="start()">Start</button>
-    <button id="command" onclick="command()">Command</button>
-
+    <div>
+        <span id="my-identifier">hello</span>
+    </div>
     <div id="media">
         <h2>Media</h2>
         <audio id="audio" autoplay="true"></audio>
-        <video id="video" autoplay="true" width="640" height="480" playsinline="true"></video>
+        <video id="video" autoplay="true" width="320" height="240" playsinline="true"></video>
     </div>
 
     <div>
-        <pre id="system-channel" style="height: 200px;"></pre>
-        <pre id="data-channel" style="height: 200px;"></pre>
-
+        <select id="select_video_cb">
+            <option>Пункт 1</option>
+            <option>Пункт 2</option>
+        </select>
     </div>
+    <button id="command" onclick="command()">Command</button>
+
+    <div>
+        <pre id="chat" style="height: 200px;"></pre>
+    </div>
+
+    <input type="text" id="chatinput" name="chatinput" />
 
     <h2>State</h2>
     <p>

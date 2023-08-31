@@ -1,8 +1,7 @@
 // peer connection
 var pc = null;
 
-var dataChannelLog = document.getElementById('data-channel')
-var systemChannelLog = document.getElementById('system-channel')
+var chatChannelLog = document.getElementById('chat')
 var iceConnectionLog = document.getElementById('ice-connection-state')
 var iceGatheringLog = document.getElementById('ice-gathering-state')
 var signalingLog = document.getElementById('signaling-state')
@@ -112,18 +111,50 @@ function current_stamp() {
 
 function send_command(txt) 
 {
-    console.log("COMMAND:")
-    console.log(txt)
     DATACHANNEL.send(txt)
 }
 
 function command()
 {
+    cb = document.getElementById("select_video_cb")
     dct = {
         "cmd" : "set_video",
-        "identifier" : "1"
+        "identifier" : cb.options[cb.selectedIndex].text
     }
     send_command(JSON.stringify(dct))
+}
+
+function on_command_message(evt) 
+{
+    dct = JSON.parse(evt.data)
+    cmd = dct.cmd
+    console.log(evt.data)
+    
+    if (cmd == "anounce_video_list") 
+    {
+        cb = document.getElementById("select_video_cb")
+        while (cb.options.length > 0) {                
+            cb.remove(0);
+        }  
+        console.log(cb.options)
+        dct.identifiers.forEach((i) => {
+            cb.options.add(new Option(i))
+        })
+    }
+
+    if (cmd == "set_unique_id") 
+    {
+        console.log("SET_UNIQUE_ID")
+        uniqid = dct.identifier
+        el = document.getElementById("my-identifier")
+        el.textContent = uniqid
+    }
+
+    if (cmd == "chat_message") 
+    {
+        chat_element = document.getElementById("chat")
+        chat_element.textContent += dct.identifier + "> " + dct.data + "\r\n"
+    }
 }
 
 function start() 
@@ -132,37 +163,8 @@ function start()
     if (true) {
         //var parameters = JSON.parse(document.getElementById('datachannel-parameters').value);
         var parameters = {}
-
-        dc = pc.createDataChannel('chat', parameters);
-        dc.onclose = function() {
-            clearInterval(dcInterval);
-            dataChannelLog.textContent += '- close\n';
-        };
-        dc.onopen = function() {
-            dataChannelLog.textContent += '- open\n';
-            dcInterval = setInterval(function() {
-                var message = 'ping ' + current_stamp();
-                dataChannelLog.textContent += '> ' + message + '\n';
-                dc.send(message);
-            }, 1000);
-        };
-        dc.onmessage = function(evt) {
-            dataChannelLog.textContent += '< ' + evt.data + '\n';
-
-            if (evt.data.substring(0, 4) === 'pong') {
-                var elapsed_ms = current_stamp() - parseInt(evt.data.substring(5), 10);
-                dataChannelLog.textContent += ' RTT ' + elapsed_ms + ' ms\n';
-            }
-        };
-
-
         server_mc = pc.createDataChannel('server-message', parameters);
-        server_mc.onopen = function() {
-            console.log("SERVER MESSAGE")
-        };
-        server_mc.onmessage = function(evt) {
-            systemChannelLog.textContent += '< ' + evt.data + '\n';
-        };
+        server_mc.onmessage = on_command_message
         DATACHANNEL = server_mc
     }    
 
@@ -174,16 +176,127 @@ function start()
             height: 480
         }
     };
-    supportedConstrains = navigator.mediaDevices.getSupportedConstraints()
-    console.log(supportedConstrains)
-    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {        
+
+    navigator.mediaDevices.enumerateDevices().then((devices)=>{
+        console.log(devices)
+    })
+
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
+        console.log(stream)        
        if (!WITHOUT_VIDEO)
            document.getElementById('video').srcObject = stream;
        stream.getTracks().forEach(function(track) {
            console.log("ADD TRACK")
+           console.log(track)
+           console.log(track.getConstraints())
+           console.log(track.getSettings())
            sender = pc.addTrack(track, stream);
            console.log(sender)
        });
        negotiate()   
     });     
 }
+
+start()
+
+var input = document.getElementById("chatinput");
+input.addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      text = input.value
+      if (text == "")
+        return;
+      console.log(text)
+      dct = {
+            "cmd" : "chat_message",
+            "data" : text
+        }
+       send_command(JSON.stringify(dct))
+       text = input.value = ""
+    }
+  }); 
+
+
+
+
+
+
+  var ResolutionsToCheck = [
+    {width: 160, height:120},
+    {width: 320, height:180},
+    {width: 320, height:240},
+    {width: 640, height:360},
+    {width: 640, height:480},
+    {width: 768, height:576},
+    {width: 1024, height:576},
+    {width: 1280, height:720},
+    {width: 1280, height:768},
+    {width: 1280, height:800},
+    {width: 1280, height:900},
+    {width: 1280, height:1000},
+    {width: 1920, height:1080},
+    {width: 1920, height:1200},
+    {width: 2560, height:1440},
+    {width: 3840, height:2160},
+    {width: 4096, height:2160}
+];
+
+var left = 0;
+var right = ResolutionsToCheck.length;
+var selectedWidth;
+var selectedHeight;
+var mid;
+
+function FindMaximum_WidthHeight_ForCamera()
+{
+console.log("left:right = ", left, ":", right);
+if(left > right)
+{
+console.log("Selected Height:Width = ", selectedWidth, ":", selectedHeight);
+return;
+}
+
+mid = Math.floor((left + right) / 2);
+
+var temporaryConstraints = {
+"audio": true,
+"video": {
+"mandatory": {
+"minWidth": ResolutionsToCheck[mid].width,
+"minHeight": ResolutionsToCheck[mid].height,
+"maxWidth": ResolutionsToCheck[mid].width,
+"maxHeight": ResolutionsToCheck[mid].height
+},
+"optional": []
+}
+}
+
+navigator.mediaDevices.getUserMedia(temporaryConstraints).then(checkSuccess).catch(checkError);
+}
+
+function checkSuccess(stream)
+{
+console.log("Success for --> " , mid , " ", ResolutionsToCheck[mid]);
+selectedWidth = ResolutionsToCheck[mid].width;
+selectedHeight = ResolutionsToCheck[mid].height;
+
+left = mid+1;
+
+for (let track of stream.getTracks()) 
+{ 
+track.stop()
+}
+
+FindMaximum_WidthHeight_ForCamera();
+}
+function checkError(error)
+{
+console.log("Failed for --> " + mid , " ", ResolutionsToCheck[mid],  " ", error);
+right = mid-1;
+
+FindMaximum_WidthHeight_ForCamera();
+}
+
+console.log("HEERERERER")
+FindMaximum_WidthHeight_ForCamera();
+console.log("HEERERERER 222")
