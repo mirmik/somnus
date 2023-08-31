@@ -2,9 +2,9 @@
 var pc = null;
 
 var chatChannelLog = document.getElementById('chat')
-var iceConnectionLog = document.getElementById('ice-connection-state')
-var iceGatheringLog = document.getElementById('ice-gathering-state')
-var signalingLog = document.getElementById('signaling-state')
+// var iceConnectionLog = document.getElementById('ice-connection-state')
+// var iceGatheringLog = document.getElementById('ice-gathering-state')
+// var signalingLog = document.getElementById('signaling-state')
 
 let WITHOUT_VIDEO = true;
 var DATACHANNEL = null
@@ -33,7 +33,7 @@ function negotiate() {
         var offer = pc.localDescription;
         var codec;
 
-        document.getElementById('offer-sdp').textContent = offer.sdp;
+        //document.getElementById('offer-sdp').textContent = offer.sdp;
         return fetch('/offer', {
             body: JSON.stringify({
                 sdp: offer.sdp,
@@ -49,7 +49,7 @@ function negotiate() {
         return response.json();
     }).then(function(answer) {
         console.log("ANSWER")        
-        document.getElementById('answer-sdp').textContent = answer.sdp;
+        //document.getElementById('answer-sdp').textContent = answer.sdp;
         return pc.setRemoteDescription(answer);
     }).catch(function(e) {
         alert(e);
@@ -69,21 +69,21 @@ function createPeerConnection() {
     // register some listeners to help debugging
     pc.addEventListener('icegatheringstatechange', function() {
         console.log("icegatheringstatechange")
-        iceGatheringLog.textContent += ' -> ' + pc.iceGatheringState;
+        // iceGatheringLog.textContent += ' -> ' + pc.iceGatheringState;
     }, false);
-    iceGatheringLog.textContent = pc.iceGatheringState;
+    // iceGatheringLog.textContent = pc.iceGatheringState;
 
     pc.addEventListener('iceconnectionstatechange', function() {
         console.log("iceconnectionstatechange")
-        iceConnectionLog.textContent += ' -> ' + pc.iceConnectionState;
+        // iceConnectionLog.textContent += ' -> ' + pc.iceConnectionState;
     }, false);
-    iceConnectionLog.textContent = pc.iceConnectionState;
+    // iceConnectionLog.textContent = pc.iceConnectionState;
 
     pc.addEventListener('signalingstatechange', function() {
         console.log("signalingstatechange")
-        signalingLog.textContent += ' -> ' + pc.signalingState;
+        // signalingLog.textContent += ' -> ' + pc.signalingState;
     }, false);
-    signalingLog.textContent = pc.signalingState;
+    // signalingLog.textContent = pc.signalingState;
 
     // connect audio / video
     pc.addEventListener('track', function(evt) {
