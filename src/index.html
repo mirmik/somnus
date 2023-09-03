@@ -29,28 +29,39 @@
 </head>
 
 <body>
+    <h2>Контрольная панель клиента:</h2>
     <div>
-        <span id="my-identifier">hello</span>
+        <span>Состояние:</span>
+        <span id="state">Loading...</span>
+    </div>
+    <div>
+        <span>Идентификатор:</span>
+        <span id="my-identifier">Undefined</span>
     </div>
     <div id="media">
-        <h2>Media</h2>
-        <audio id="audio" autoplay="true"></audio>
+        <audio id="audio2" autoplay="true"></audio>
+        <span>Local video:</span>
+        <select id="resolutions"></select> (пока не работает)
+        <!--<button onclick="start_video()">SendVideo</button>-->
+        <video id="video2" muted autoplay="true" width="640" height="480" playsinline="true"></video>
+        <span>Remote video:</span>
+        <div>Выбор источника:<select id="select_video_cb"></select></div>
+        <button id="command" onclick="command()">Запросить</button>
         <video id="video" autoplay="true" width="640" height="480" playsinline="true"></video>
     </div>
 
-    <div>
-        <select id="select_video_cb">
-            <option>Пункт 1</option>
-            <option>Пункт 2</option>
-        </select>
-    </div>
-    <button id="command" onclick="command()">Command</button>
-
+    <span>Чат:</span>
     <div>
         <pre id="chat" style="height: 200px;"></pre>
     </div>
 
-    <input type="text" id="chatinput" name="chatinput" />
+    Ввод:<input type="text" id="chatinput" name="chatinput" />
+
+    <div>
+        --------------------------------------------------
+    </div>
+    <h2>Контрольная панель сервера:</h2>
+    <div id="server-panel"></div>
 
     <!-- <h2>State</h2>
     <p>

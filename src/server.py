@@ -83,7 +83,7 @@ class ClientsCollection:
             try:
                 cls.clients[idx].anounce()
             except: 
-                print("Exception in the client:", traceback.format_exc)
+                print("Exception in the client:", traceback.format_exc())
                 todel.append(idx)
 
         for idx in todel:    
@@ -119,17 +119,30 @@ class Client:
         }
         self.send_command(json.dumps(msgdct)) 
 
+    def enable_ndi(self, en):
+        self._video_track.enable_ndi(en)
 
     def set_video_track(self, track):
         self._video_track = track
 
+    def set_audio_track(self, track):
+        self._audio_track = track
+
     def video_sender(self):
         senders = self.pc.getSenders()
-        vs = [s for s in senders if s.track.kind == "video"][0]
+        vs = [s for s in senders if s.track and s.track.kind == "video"][0]
+        return vs
+
+    def audio_sender(self):
+        senders = self.pc.getSenders()
+        vs = [s for s in senders if s.track and s.track.kind == "audio"][0]
         return vs
 
     def video_track(self):
         return self._video_track
+
+    def audio_track(self):
+        return self._audio_track
 
     def unique_id(self):
         return self.uniqid
@@ -147,18 +160,34 @@ class Client:
             self.video_sender().replaceTrack(video_cl.video_track())
         except KeyError as err:
             print("Key is not found:", iden)
+            ClientsCollection.anounce()
+        except:
+            print(traceback.format_exc())
+
+    def set_audiotrack_for_identifier(self, iden):
+        try:
+            cl = ClientsCollection.client_for_id(iden)
+            track = cl.audio_track()
+            self.audio_sender().replaceTrack(cl.video_track())
+        except KeyError as err:
+            print("Key is not found:", iden)
+            ClientsCollection.anounce()
         except:
             print(traceback.format_exc())
 
     def on_command_message(self, msg):
-        print("ExtrnalCommand:", msg)
+        print("ExternalCommand:", msg)
         dct = json.loads(msg)
         cmd  = dct["cmd"]
         if cmd == "set_video":
             self.set_videotrack_for_identifier(dct["identifier"])
+            #self.set_audiotrack_for_identifier(dct["identifier"])
         
         if cmd == "chat_message":
             ClientsCollection.send_chat_message(self.unique_id(), dct["data"])
+
+        if cmd == "ndi_enable":
+            self.enable_ndi(dct["state"] == "ON")
 
     def anounce(self):
         self.anounce_existance_video()
@@ -177,11 +206,6 @@ logger = logging.getLogger("pc")
 #pcs = set() 
 
 relay = MediaRelay()
-
-#send_settings = ndi.SendCreate()
-#send_settings.ndi_name = 'ndi-python'
-#ndi_send = ndi.send_create(send_settings)
-#ndi_video_frame = ndi.VideoFrameV2()
 
 class FlagVideoStreamTrack(VideoStreamTrack):
     """
@@ -257,6 +281,15 @@ class VideoTransformTrack(MediaStreamTrack):
         self.track = track
         self.transform = transform
         self.inited = False
+        self.ndi_enabled = False
+
+        self.send_settings = ndi.SendCreate()
+        self.send_settings.ndi_name = 'ndi-python'
+        self.ndi_send = ndi.send_create(self.send_settings)
+        self.ndi_video_frame = ndi.VideoFrameV2()
+
+    def enable_ndi(self, en):
+        self.ndi_enabled = en
 
     async def recv(self):
         if (not self.inited):
@@ -264,11 +297,12 @@ class VideoTransformTrack(MediaStreamTrack):
             print("VideoTransformTrack inited")
 
         frame = await self.track.recv()
-        #img = frame.to_ndarray(format="bgr24")
-        #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
-        #ndi_video_frame.data = img
-        #ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_RGBX
-        #ndi.send_send_video_v2(ndi_send, ndi_video_frame)
+        if (self.ndi_enabled):
+            img = frame.to_ndarray(format="bgr24")
+            #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
+            self.ndi_video_frame.data = img
+            self.ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
+            ndi.send_send_video_v2(self.ndi_send, self.ndi_video_frame)
         return frame
 
 async def index(request):
@@ -323,7 +357,7 @@ async def offer(request):
         logger.info(pc_id + " " + msg, *args)
 
     flag_track = FlagVideoStreamTrack(
-        [(0,255,255),(255,0,255), (255,255,0)]
+        [(255,0,0),(0,255,0), (0,0,255)]
     )
     flag_sender = pc.addTrack(flag_track)
     
@@ -349,15 +383,16 @@ async def offer(request):
         log_info("Track %s received", track.kind)
 
         if track.kind == "audio":
-            pass
-        #    pc.addTrack(player.audio)
-        elif track.kind == "video":           
+            client.set_audio_track(track)
+            print("ADDED AUDIO TRACK")      
+            #pass
+            #pc.addTrack(track)
+        elif track.kind == "video":     
+            print("ADDED VIDEO TRACK")      
             TRANSFORM_TRACK = VideoTransformTrack(
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
             client.set_video_track(TRANSFORM_TRACK)
-            
-            REMOTE_TRACKS.append(TRANSFORM_TRACK)
             obj = pc.addTrack(
                 TRANSFORM_TRACK
             )

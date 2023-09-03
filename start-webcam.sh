@@ -1,1 +1,0 @@
-python3 src/webcam.py --cert-file cert.pem --key-file key.pem
