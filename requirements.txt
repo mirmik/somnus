@@ -1,0 +1,3 @@
+ndi-python 
+numpy 
+opencv-python

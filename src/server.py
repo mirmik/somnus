@@ -6,9 +6,7 @@ import os
 import ssl
 import uuid
 import traceback
-
 import threading
-
 import cv2
 import numpy
 import math
