@@ -1,1 +1,1 @@
-python3 src/server.py --cert-file cert.pem --key-file key.pem
+python3 src/server.py --cert-file cert.pem --key-file key.pem --port 8080 --host "0.0.0.0"

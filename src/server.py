@@ -305,13 +305,13 @@ class VideoTransformTrack(MediaStreamTrack):
 
 async def index(request):
     print("INDEX")
-    content = open(os.path.join(ROOT, "index.html"), "r").read()
+    content = open(os.path.join(ROOT, "assets/index.html"), "r").read()
     return web.Response(content_type="text/html", text=content)
 
 
 async def javascript(request):
     print("JAVASCRIPT")
-    content = open(os.path.join(ROOT, "client.js"), "r").read()
+    content = open(os.path.join(ROOT, "assets/client.js"), "r").read()
     return web.Response(content_type="application/javascript", text=content)
 
 rgb_flag = FlagVideoStreamTrack(
@@ -426,12 +426,12 @@ async def on_shutdown(app):
     await asyncio.gather(*coros)
     ClientsCollection.clear()
 
-async def main():
+async def main(cert_file, key_file):
     parser = argparse.ArgumentParser(
         description="WebRTC audio / video / data-channels demo"
     )
-    parser.add_argument("--cert-file", help="SSL certificate file (for HTTPS)")
-    parser.add_argument("--key-file", help="SSL key file (for HTTPS)")
+    #parser.add_argument("--cert-file", help="SSL certificate file (for HTTPS)")
+    #parser.add_argument("--key-file", help="SSL key file (for HTTPS)")
     parser.add_argument(
         "--host", default="0.0.0.0", help="Host for HTTP server (default: 0.0.0.0)"
     )
@@ -447,11 +447,11 @@ async def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    if args.cert_file:
-        ssl_context = ssl.SSLContext()
-        ssl_context.load_cert_chain(args.cert_file, args.key_file)
-    else:
-        ssl_context = None
+    #if args.cert_file:
+    ssl_context = ssl.SSLContext()
+    ssl_context.load_cert_chain(cert_file, key_file)
+    #else:
+    #    ssl_context = None
 
     app = web.Application()
     app.on_shutdown.append(on_shutdown)
