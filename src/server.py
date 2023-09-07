@@ -6,6 +6,7 @@ import os
 import ssl
 import uuid
 import traceback
+import codecs
 import threading
 import cv2
 import numpy
@@ -305,13 +306,15 @@ class VideoTransformTrack(MediaStreamTrack):
 
 async def index(request):
     print("INDEX")
-    content = open(os.path.join(ROOT, "assets/index.html"), "r").read()
+    f = codecs.open(os.path.join(ROOT, "assets/index.html"), "r", "utf-8")
+    content = f.read()
     return web.Response(content_type="text/html", text=content)
 
 
 async def javascript(request):
     print("JAVASCRIPT")
-    content = open(os.path.join(ROOT, "assets/client.js"), "r").read()
+    f = codecs.open(os.path.join(ROOT, "assets/client.js"), "r", "utf-8")
+    content = f.read()
     return web.Response(content_type="application/javascript", text=content)
 
 rgb_flag = FlagVideoStreamTrack(
@@ -480,4 +483,4 @@ async def main(cert_file, key_file):
     )
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(cert_file="assets/cert.pem",key_file="assets/key.pem"))
