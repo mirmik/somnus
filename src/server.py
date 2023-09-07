@@ -282,10 +282,10 @@ class VideoTransformTrack(MediaStreamTrack):
         self.inited = False
         self.ndi_enabled = False
 
-        self.send_settings = ndi.SendCreate()
-        self.send_settings.ndi_name = 'ndi-python'
-        self.ndi_send = ndi.send_create(self.send_settings)
-        self.ndi_video_frame = ndi.VideoFrameV2()
+        #self.send_settings = ndi.SendCreate()
+        #self.send_settings.ndi_name = 'ndi-python'
+        #self.ndi_send = ndi.send_create(self.send_settings)
+        #self.ndi_video_frame = ndi.VideoFrameV2()
 
     def enable_ndi(self, en):
         self.ndi_enabled = en
@@ -299,9 +299,9 @@ class VideoTransformTrack(MediaStreamTrack):
         if (self.ndi_enabled):
             img = frame.to_ndarray(format="bgr24")
             #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
-            self.ndi_video_frame.data = img
-            self.ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
-            ndi.send_send_video_v2(self.ndi_send, self.ndi_video_frame)
+            #self.ndi_video_frame.data = img
+            #self.ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
+            #ndi.send_send_video_v2(self.ndi_send, self.ndi_video_frame)
         return frame
 
 async def index(request):
@@ -433,8 +433,8 @@ async def main(cert_file, key_file):
     parser = argparse.ArgumentParser(
         description="WebRTC audio / video / data-channels demo"
     )
-    #parser.add_argument("--cert-file", help="SSL certificate file (for HTTPS)")
-    #parser.add_argument("--key-file", help="SSL key file (for HTTPS)")
+    parser.add_argument("--cert-file", help="SSL certificate file (for HTTPS)")
+    parser.add_argument("--key-file", help="SSL key file (for HTTPS)")
     parser.add_argument(
         "--host", default="0.0.0.0", help="Host for HTTP server (default: 0.0.0.0)"
     )
@@ -451,6 +451,12 @@ async def main(cert_file, key_file):
         logging.basicConfig(level=logging.INFO)
 
     #if args.cert_file:
+    if args.cert_file:
+        cert_file = args.cert_file
+        
+    if args.key_file:
+        key_file = args.key_file
+    
     ssl_context = ssl.SSLContext()
     ssl_context.load_cert_chain(cert_file, key_file)
     #else:
