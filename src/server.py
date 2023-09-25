@@ -205,6 +205,7 @@ logger = logging.getLogger("pc")
 #pcs = set() 
 
 relay = MediaRelay()
+audio_relay = MediaRelay()
 
 class FlagVideoStreamTrack(VideoStreamTrack):
     """
@@ -304,6 +305,22 @@ class VideoTransformTrack(MediaStreamTrack):
             #ndi.send_send_video_v2(self.ndi_send, self.ndi_video_frame)
         return frame
 
+
+class AudioTransformTrack(MediaStreamTrack):
+    """
+    A audio stream track that transforms frames from an another track.
+    """
+
+    kind = "audio"
+
+    def __init__(self, track):
+        super().__init__()  # don't forget this!
+        self.track = track
+
+    async def recv(self):
+        frame = await self.track.recv()
+        return frame
+
 async def index(request):
     print("INDEX")
     f = codecs.open(os.path.join(ROOT, "assets/index.html"), "r", "utf-8")
@@ -384,18 +401,19 @@ async def offer(request):
         log_info("Track %s received", track.kind)
 
         if track.kind == "audio":
-            client.set_audio_track(track)
             print("ADDED AUDIO TRACK")      
-            #pass
-            #pc.addTrack(track)
+            client.set_audio_track(track)
+            subscription_track = audio_relay.subscribe(track)
+            newtrack = AudioTransformTrack(subscription_track)
+            pc.addTrack(newtrack)
         elif track.kind == "video":     
             print("ADDED VIDEO TRACK")      
-            TRANSFORM_TRACK = VideoTransformTrack(
+            newtrack = VideoTransformTrack(
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
-            client.set_video_track(TRANSFORM_TRACK)
+            client.set_video_track(newtrack)
             obj = pc.addTrack(
-                TRANSFORM_TRACK
+                newtrack
             )
             print(obj)
 

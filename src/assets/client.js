@@ -258,10 +258,7 @@ function start_video()
     console.log("StartVideo")
     var constraints = {
         audio: true,
-        video: {
-            width: 640,
-            height: 480
-        }
+        video: true
     };
 
     navigator.mediaDevices.enumerateDevices().then((devices)=>{
