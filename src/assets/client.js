@@ -6,7 +6,6 @@ var chatChannelLog = document.getElementById('chat')
 // var iceGatheringLog = document.getElementById('ice-gathering-state')
 // var signalingLog = document.getElementById('signaling-state')
 
-let WITHOUT_VIDEO = true;
 var DATACHANNEL = null
 
 
@@ -266,12 +265,6 @@ function start_video()
     })
 
     navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
-        console.log(stream)        
-       if (!WITHOUT_VIDEO)
-           document.getElementById('video').srcObject = stream;
-       stream.getTracks().forEach(function(track) {
-           sender = pc.addTrack(track, stream);
-       });
        document.getElementById('video2').srcObject = stream;
        negotiate()   
     });     
