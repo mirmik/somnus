@@ -4,89 +4,73 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebRTC demo</title>
-    <style>
-        button {
-            padding: 8px 16px;
-        }
 
-        pre {
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-
-        video {
-            width: 100%;
-        }
-
-        .option {
-            margin-bottom: 8px;
-        }
-
-        #media {
-            max-width: 1280px;
-        }
-    </style>
+    <link rel="stylesheet" href="main.css" />
 </head>
 
 <body>
     <span>Отладочный выхлоп:</span>
     <span id="errorlog" STYLE="font-size:24px">ОК</span>
     <h2>Контрольная панель клиента:</h2>
-    <div>
-        <span>Состояние:</span>
-        <span id="state">Loading...</span>
-    </div>
-    <div>
-        <span>Идентификатор:</span>
-        <span id="my-identifier">Undefined</span>
-    </div>
-    <div id="media">
+    <div id="local_section">
         <audio id="audio2" autoplay="true"></audio>
         <span>Local video:</span>
-        <select id="resolutions"></select> (пока не работает)
-        <!--<button onclick="start_video()">SendVideo</button>-->
+
         <video id="video2" muted autoplay="true" width="640" height="480" playsinline="true"></video>
-        <div>
-            <button id="start_btn" onclick="start()">Подключиться к серверу</button>
-            <!--чекбокс nonchecked-->
-            <input type="checkbox" id="use_ice_server" /> <label for="use_ice_server">Использовать
-                ICEServer</label>
-        </div>
+    </div>
+
+    <div>
+        <span>Амплитуда аудио сигнала:</span>
+        <span id="audio-amplitude">0</span>
+    </div>
+    <div>
+        <span>Разрешение видео:</span>
+        <select id="resolutions" onchange="change_resolution_button()"></select>
+        <span id="resolution_state">resolution_state</span>
+    </div>
+    <button id="disable_camera" onclick="disable_camera()">disable_camera</button>
+    <button id="enable_camera" onclick="enable_camera()">enable_camera</button>
+    <button id="disable_mic" onclick="disable_mic()">disable_mic</button>
+    <button id="enable_mic" onclick="enable_mic()">enable_mic</button>
+
+
+    <h2>Подключение:</h2>
+    <div>
+        <span>Состояние подключения к серверу:</span>
+        <span id="state">Не подключено</span>
+    </div>
+    <div>
+        <span>Мой идентификатор:</span>
+        <span id="my-identifier">Ещё не выдан</span>
+    </div>
+    <div id="connection_section">
+        <button id="start_btn" onclick="start_connection()">Подключиться к серверу</button>
+        <!--чекбокс nonchecked-->
+        <input type="checkbox" id="use_ice_server" /> <label for="use_ice_server">Использовать
+            ICEServer</label>
+    </div>
+
+    <div id="remote_section" style="display:none">
         <span>Remote video:</span>
         <div>Выбор источника:<select id="select_video_cb"></select></div>
         <button id="command" onclick="command()">Запросить</button>
         <video id="video" autoplay="true" width="640" height="480" playsinline="true"></video>
+        <!--/div>-->
+
+        <h2>Чат:</h2>
+        <div>
+            <pre id="chat" style="height: 200px;"></pre>
+        </div>
+
+        Ввод:<input type="text" id="chatinput" name="chatinput" />
+
+        <div>
+            --------------------------------------------------
+        </div>
+        <h2>Контрольная панель сервера:</h2>
+        <div id="server-panel"></div>
     </div>
 
-    <span>Чат:</span>
-    <div>
-        <pre id="chat" style="height: 200px;"></pre>
-    </div>
-
-    Ввод:<input type="text" id="chatinput" name="chatinput" />
-
-    <div>
-        --------------------------------------------------
-    </div>
-    <h2>Контрольная панель сервера:</h2>
-    <div id="server-panel"></div>
-
-    <!-- <h2>State</h2>
-    <p>
-        ICE gathering state: <span id="ice-gathering-state"></span>
-    </p>
-    <p>
-        ICE connection state: <span id="ice-connection-state"></span>
-    </p>
-    <p>
-        Signaling state: <span id="signaling-state"></span>
-    </p>
-    <p>
-        Offer SDP: <span id="offer-sdp"></span>
-    </p>
-    <p>
-        Answer SDP: <span id="answer-sdp"></span>
-    </p> -->
     <script src="client.js"></script>
 </body>
 

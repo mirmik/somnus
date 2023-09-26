@@ -14,6 +14,7 @@ import math
 import aiohttp
 from aiohttp import web
 import aiortc
+from av import AudioFrame, VideoFrame
 from aiortc import MediaStreamTrack, VideoStreamTrack, RTCIceServer, RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
 from av import VideoFrame
@@ -155,7 +156,6 @@ class Client:
     def set_videotrack_for_identifier(self, iden):
         try:
             video_cl = ClientsCollection.client_for_id(iden)
-            track = video_cl.video_track()
             self.video_sender().replaceTrack(video_cl.video_track())
         except KeyError as err:
             print("Key is not found:", iden)
@@ -166,8 +166,7 @@ class Client:
     def set_audiotrack_for_identifier(self, iden):
         try:
             cl = ClientsCollection.client_for_id(iden)
-            track = cl.audio_track()
-            self.audio_sender().replaceTrack(cl.video_track())
+            self.audio_sender().replaceTrack(cl.audio_track())
         except KeyError as err:
             print("Key is not found:", iden)
             ClientsCollection.anounce()
@@ -180,7 +179,7 @@ class Client:
         cmd  = dct["cmd"]
         if cmd == "set_video":
             self.set_videotrack_for_identifier(dct["identifier"])
-            #self.set_audiotrack_for_identifier(dct["identifier"])
+            self.set_audiotrack_for_identifier(dct["identifier"])
         
         if cmd == "chat_message":
             ClientsCollection.send_chat_message(self.unique_id(), dct["data"])
@@ -321,18 +320,38 @@ class AudioTransformTrack(MediaStreamTrack):
         frame = await self.track.recv()
         return frame
 
+class SilenceAudioStreamTrack(MediaStreamTrack):
+    """
+    A video stream track that returns a silent frame.
+    """
+
+    kind = "audio"
+
+    def __init__(self):
+        super().__init__()  # don't forget this!
+
+    async def recv(self):
+        audio = np.zeros((1, 2048), dtype=np.int16)
+        frame = AudioFrame.from_ndarray(audio, layout='mono', format='s16')
+        frame.sample_rate = 16000 # remember to set rate !
+        #frame.timestamp = 0
+        return frame
+
 async def index(request):
-    print("INDEX")
     f = codecs.open(os.path.join(ROOT, "assets/index.html"), "r", "utf-8")
     content = f.read()
     return web.Response(content_type="text/html", text=content)
 
 
 async def javascript(request):
-    print("JAVASCRIPT")
     f = codecs.open(os.path.join(ROOT, "assets/client.js"), "r", "utf-8")
     content = f.read()
     return web.Response(content_type="application/javascript", text=content)
+
+async def stylefile(request):
+    f = codecs.open(os.path.join(ROOT, "assets/main.css"), "r", "utf-8")
+    content = f.read()
+    return web.Response(content_type="text/css", text=content)
 
 rgb_flag = FlagVideoStreamTrack(
                 [(255,0,0), (0,255,0), (0,0,255)]
@@ -408,10 +427,12 @@ async def offer(request):
         log_info("Track %s received", track.kind)
 
         if track.kind == "audio":
-            print("ADDED AUDIO TRACK")      
-            client.set_audio_track(track)
+            print("ADDED AUDIO TRACK")     
             subscription_track = audio_relay.subscribe(track)
-            newtrack = AudioTransformTrack(subscription_track)
+            newtrack = AudioTransformTrack(subscription_track) 
+            client.set_audio_track(newtrack)
+
+            #newtrack = SilenceAudioStreamTrack()
             pc.addTrack(newtrack)
         elif track.kind == "video":     
             print("ADDED VIDEO TRACK")      
@@ -419,10 +440,10 @@ async def offer(request):
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
             client.set_video_track(newtrack)
-            obj = pc.addTrack(
-                newtrack
-            )
-            print(obj)
+            #obj = pc.addTrack(
+            #    newtrack
+            #)
+            #print(obj)
 
             #recorder.addTrack(relay.subscribe(track))
 
@@ -491,6 +512,7 @@ async def main(cert_file, key_file):
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
+    app.router.add_get("/main.css", stylefile)
     app.router.add_post("/offer", offer)
     
     
