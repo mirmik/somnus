@@ -14,7 +14,7 @@ import math
 import aiohttp
 from aiohttp import web
 import aiortc
-from aiortc import MediaStreamTrack, VideoStreamTrack, RTCPeerConnection, RTCSessionDescription
+from aiortc import MediaStreamTrack, VideoStreamTrack, RTCIceServer, RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
 from av import VideoFrame
 import json
@@ -365,7 +365,14 @@ async def offer(request):
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
+    #iceServers = []
+    #iceServers.append(RTCIceServer('stun:stun.l.google.com:19302'))
+    #iceServers.append(RTCIceServer('stun:numb.viagenie.ca'))
+    #iceServers.append(RTCIceServer('turn:numb.viagenie.ca', username='username', credential='credential'))
+    #pc = RTCPeerConnection(RTCConfiguration(iceServers))
+    
     pc = RTCPeerConnection()
+    #pc.addIceCandidate(descr)
     
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     client = Client(pc)

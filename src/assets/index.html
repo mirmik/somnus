@@ -29,6 +29,8 @@
 </head>
 
 <body>
+    <span>Отладочный выхлоп:</span>
+    <span id="errorlog" STYLE="font-size:24px">ОК</span>
     <h2>Контрольная панель клиента:</h2>
     <div>
         <span>Состояние:</span>
@@ -44,6 +46,12 @@
         <select id="resolutions"></select> (пока не работает)
         <!--<button onclick="start_video()">SendVideo</button>-->
         <video id="video2" muted autoplay="true" width="640" height="480" playsinline="true"></video>
+        <div>
+            <button id="start_btn" onclick="start()">Подключиться к серверу</button>
+            <!--чекбокс nonchecked-->
+            <input type="checkbox" id="use_ice_server" /> <label for="use_ice_server">Использовать
+                ICEServer</label>
+        </div>
         <span>Remote video:</span>
         <div>Выбор источника:<select id="select_video_cb"></select></div>
         <button id="command" onclick="command()">Запросить</button>

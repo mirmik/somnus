@@ -82,13 +82,48 @@ function negotiate() {
     });
 }
 
-function createPeerConnection() {
+function createPeerConnection(use_ice_server) {
     var config = {
         sdpSemantics: 'unified-plan',
-        iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
-    };
-    config.iceServers = [{urls: ['stun:stun.l.google.com:19302']}];
-        
+    }; 
+    if (use_ice_server) 
+        config.iceServers = [{url:'stun:stun.l.google.com:19302'},
+    
+        // iceServers: [
+        // {url:'stun:stun01.sipphone.com'},
+        // {url:'stun:stun.ekiga.net'},
+        // {url:'stun:stun.fwdnet.net'},
+        // {url:'stun:stun.ideasip.com'},
+        // {url:'stun:stun.iptel.org'},
+        // {url:'stun:stun.rixtelecom.se'},
+        // {url:'stun:stun.schlund.de'},
+        // {url:'stun:stun1.l.google.com:19302'},
+        // {url:'stun:stun2.l.google.com:19302'},
+        // {url:'stun:stun3.l.google.com:19302'},
+        // {url:'stun:stun4.l.google.com:19302'},
+        // {url:'stun:stunserver.org'},
+        // {url:'stun:stun.softjoys.com'},
+        // {url:'stun:stun.voiparound.com'},
+        // {url:'stun:stun.voipbuster.com'},
+        // {url:'stun:stun.voipstunt.com'},
+        // {url:'stun:stun.voxgratia.org'},
+        // {url:'stun:stun.xten.com'},
+        // {
+        //     url: 'turn:numb.viagenie.ca',
+        //     credential: 'muazkh',
+        //     username: 'webrtc@live.com'
+        // },
+        // {
+        //     url: 'turn:192.158.29.39:3478?transport=udp',
+        //     credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+        //     username: '28224511:1379330808'
+        // },
+        // {
+        //     url: 'turn:192.158.29.39:3478?transport=tcp',
+        //     credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+        //     username: '28224511:1379330808'
+        // }
+    ]
 
     pc = new RTCPeerConnection(config);
 
@@ -239,38 +274,53 @@ function on_command_message(evt)
 
 function start() 
 {
-    pc = createPeerConnection();    
-    if (true) {
-        //var parameters = JSON.parse(document.getElementById('datachannel-parameters').value);
+    try {
+        use_ice_server = document.getElementById("use_ice_server").checked
+        pc = createPeerConnection(use_ice_server);    
         var parameters = {}
         server_mc = pc.createDataChannel('server-message', parameters);
         server_mc.onmessage = on_command_message
         DATACHANNEL = server_mc
-    }    
-
-    //negotiate()   
-    start_video()
+        negotiate()   
+    }
+    catch (e) {
+        error_state(e)
+    }
 }
 
-function start_video() 
+function error_state(exception)
 {
-    console.log("StartVideo")
-    var constraints = {
-        audio: true,
-        video: true
-    };
-
-    navigator.mediaDevices.enumerateDevices().then((devices)=>{
-        console.log(devices)
-    })
-
-    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
-       document.getElementById('video2').srcObject = stream;
-       negotiate()   
-    });     
+    document.getElementById('errorlog').textContent = exception
+    console.log(exception)
 }
 
-start()
+function exception_simulate()
+{
+    throw "Exception"
+}
+
+function open_local_media() 
+{
+    try {
+        var constraints = {
+            audio: true,
+            video: true
+        };
+
+        navigator.mediaDevices.enumerateDevices().then((devices)=>{
+            console.log(devices)
+        })
+
+        navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
+            document.getElementById('video2').srcObject = stream;
+        });  
+    }
+    catch (e) {
+        error_state(e)
+    }
+}
+
+open_local_media()
 
 var input = document.getElementById("chatinput");
 input.addEventListener("keypress", function(event) {
