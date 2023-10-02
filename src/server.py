@@ -33,8 +33,6 @@ REMOTE_TRACKS = list()
 ROOT = os.path.dirname(__file__)
 
 logger = logging.getLogger("pc")
-#pcs = set() 
-
 relay = MediaRelay()
 audio_relay = MediaRelay()
 
@@ -60,8 +58,6 @@ rgb_flag = FlagVideoStreamTrack(
             )
 
 def on_datachannel_handler(channel, pc, client):
-    print("DATACHANNEL", channel.label)
-
     if channel.label == "server-message":
         SERVER_MESSAGE_LISTENERS.add(channel)
         client.set_datachannel(channel)
@@ -115,7 +111,6 @@ async def offer(request):
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
-        print("CONNECTIIONSTAGE", pc.connectionState)
         log_info("Connection state is %s", pc.connectionState)
         if pc.connectionState == "failed":
             await pc.close()
@@ -125,29 +120,20 @@ async def offer(request):
     recorder = MediaBlackhole()
     @pc.on("track")
     def on_track(track):
-        print("TRACK")
         log_info("Track %s received", track.kind)
 
-        if track.kind == "audio":
-            print("ADDED AUDIO TRACK")     
+        if track.kind == "audio": 
             subscription_track = audio_relay.subscribe(track)
             newtrack = AudioTransformTrack(subscription_track) 
             client.set_audio_track(newtrack)
 
             #newtrack = SilenceAudioStreamTrack()
             pc.addTrack(newtrack)
-        elif track.kind == "video":     
-            print("ADDED VIDEO TRACK")      
+        elif track.kind == "video":        
             newtrack = VideoTransformTrack(
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
                 )
             client.set_video_track(newtrack)
-            #obj = pc.addTrack(
-            #    newtrack
-            #)
-            #print(obj)
-
-            #recorder.addTrack(relay.subscribe(track))
 
         @track.on("ended")
         async def on_ended():
@@ -172,8 +158,7 @@ async def offer(request):
 
 async def on_shutdown(app):
     # close peer connections
-    print("SHUTDOWN")
-    coros = [cl.pc.close() for cl in ClientCollection.clients]
+    coros = [cl.pc.close() for cl in ClientCollection.clients.values()]
     await asyncio.gather(*coros)
     ClientCollection.clear()
 
@@ -198,7 +183,6 @@ async def main(cert_file, key_file):
     else:
         logging.basicConfig(level=logging.INFO)
 
-    #if args.cert_file:
     if args.cert_file:
         cert_file = args.cert_file
         
@@ -207,8 +191,6 @@ async def main(cert_file, key_file):
     
     ssl_context = ssl.SSLContext()
     ssl_context.load_cert_chain(cert_file, key_file)
-    #else:
-    #    ssl_context = None
 
     app = web.Application()
     app.on_shutdown.append(on_shutdown)
@@ -217,13 +199,6 @@ async def main(cert_file, key_file):
     app.router.add_get("/main.css", stylefile)
     app.router.add_post("/offer", offer)
     
-    
-    #async def async_send_server_message():
-    #    while True:
-    #        await control_message("HelloWorld")
-    #        await asyncio.sleep(1)
-
-    #sender_task = async_send_server_message()
     web_server_task = web._run_app(
         app, 
         access_log=None, 
@@ -233,8 +208,7 @@ async def main(cert_file, key_file):
     )
 
     await asyncio.gather(
-        web_server_task,
-    #    sender_task
+        web_server_task
     )
 
 def set_interrupt_handler(handler):
