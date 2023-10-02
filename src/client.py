@@ -12,9 +12,9 @@ def generate_uniqueid():
 
 
 class Client:
-    def __init__(self, pc, admin=False):
+    def __init__(self, pc, is_admin=False):
         self.pc = pc
-        self.admin = admin
+        self._is_admin = is_admin
         self.uniqid = generate_uniqueid()
         self._video_track = None
 
@@ -25,6 +25,9 @@ class Client:
             "data" : message 
         }
         self.send_command(json.dumps(msgdct)) 
+
+    def is_admin(self):
+        return self._is_admin
 
     def send_unique_id(self):
         msgdct = {
@@ -70,6 +73,12 @@ class Client:
     def set_videotrack_for_identifier(self, iden):
         try:
             video_cl = ClientCollection.client_for_id(iden)
+            if video_cl is None:
+                print("Client is not found:", iden)
+                return
+            if video_cl.is_admin():
+                print("Client is admin:", iden)
+                return
             self.video_sender().replaceTrack(video_cl.video_track())
         except KeyError as err:
             print("Key is not found:", iden)
@@ -105,7 +114,7 @@ class Client:
         self.anounce_existance_video()
 
     def anounce_existance_video(self):
-        idslist = ClientCollection.identifier_list()
+        idslist = ClientCollection.nonadmin_identifier_list()
         msgdct = {
             "cmd" : "anounce_video_list",
             "identifiers" : idslist 

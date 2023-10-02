@@ -3,6 +3,7 @@ var DATACHANNEL = null
 var PC = null
 
 function negotiate() {
+    document.getElementById('state').textContent = "Установка соединения"
     return pc.createOffer().then(function(offer) {
         return pc.setLocalDescription(offer);
     }).then(function() {

@@ -148,7 +148,7 @@ async def offer_control(request):
     
     pc = RTCPeerConnection()    
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
-    client = Client(pc, admin=True)
+    client = Client(pc, is_admin=True)
     ClientCollection.add_client(client)
 
     def log_info(msg, *args):

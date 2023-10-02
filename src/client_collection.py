@@ -12,9 +12,8 @@ class ClientCollection:
         cls.clients[client.unique_id()] = client
 
     @classmethod
-    def identifier_list(cls):
-        idslist = list(cls.clients.keys())
-        return idslist
+    def nonadmin_identifier_list(cls):
+        return [cl.unique_id() for cl in cls.clients.values() if not cl.is_admin()]
     
     @classmethod
     def client_for_pc(cls, pc):
@@ -57,6 +56,9 @@ class ClientCollection:
         
     @classmethod
     def discard(cls, client):
+        if client is None:
+            return
+
         if client.unique_id() in cls.clients:
             del cls.clients[client.unique_id()]
 
