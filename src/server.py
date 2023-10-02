@@ -7,9 +7,11 @@ import ssl
 import uuid
 import traceback
 import codecs
+import sys
 import threading
 import cv2
 import numpy
+import signal
 import math
 import aiohttp
 from aiohttp import web
@@ -17,186 +19,16 @@ import aiortc
 from av import AudioFrame, VideoFrame
 from aiortc import MediaStreamTrack, VideoStreamTrack, RTCIceServer, RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
-from av import VideoFrame
-import json
 
-import numpy as np
-import cv2 as cv
-import NDIlib as ndi
+
+from client_collection import ClientCollection
+from audio_track import AudioTransformTrack, SilenceAudioStreamTrack
+from video_track import VideoTransformTrack, FlagVideoStreamTrack
+from client import Client
 
 VIDEO_TRACKS = set()
 SERVER_MESSAGE_LISTENERS = set()
 REMOTE_TRACKS = list()
-
-IDCOUNTER = 0
-
-def generate_uniqueid():
-    global IDCOUNTER
-    IDCOUNTER += 1
-    return IDCOUNTER
-
-class ClientsCollection:
-    clients = {}
-
-    def __init__(self):
-        pass
-
-    @classmethod
-    def add_client(cls, client):
-        cls.clients[client.unique_id()] = client
-
-    @classmethod
-    def identifier_list(cls):
-        idslist = list(cls.clients.keys())
-        return idslist
-    
-    @classmethod
-    def client_for_pc(cls, pc):
-        for cl in cls.clients.values():
-            if cl.pc is pc:
-                return cl
-        return None
-
-    @classmethod
-    def clear(cls):
-        cls.clients.clear()
-
-    @classmethod
-    def send_chat_message(cls, fromid, message):
-        for cl in cls.clients.values():
-            cl.send_chat_message(fromid, message)
-
-    @classmethod
-    def send_system_chat_message(cls, message):
-        for cl in cls.clients.values():
-            cl.send_chat_message("__SYSTEM__", message)
-
-    #@classmethod
-    #def anounce_video_tracks(cls):
-    #    for cl in cls.clients.values():
-    #        cl.anounce_existance_video()
-    
-    @classmethod
-    def anounce(cls):
-        todel = []
-        for idx in cls.clients:
-            try:
-                cls.clients[idx].anounce()
-            except: 
-                print("Exception in the client:", traceback.format_exc())
-                todel.append(idx)
-
-        for idx in todel:    
-            del cls.clients[idx]
-        
-    @classmethod
-    def discard(cls, client):
-        if client.unique_id() in cls.clients:
-            del cls.clients[client.unique_id()]
-
-    @classmethod
-    def client_for_id(cls, iden):
-        return cls.clients[int(iden)]
-
-class Client:
-    def __init__(self, pc):
-        self.pc = pc
-        self.uniqid = generate_uniqueid()
-        self._video_track = None
-
-    def send_chat_message(self, fromid, message):
-        msgdct = {
-            "cmd" : "chat_message",
-            "identifier" : fromid,
-            "data" : message 
-        }
-        self.send_command(json.dumps(msgdct)) 
-
-    def send_unique_id(self):
-        msgdct = {
-            "cmd" : "set_unique_id",
-            "identifier" : self.unique_id() 
-        }
-        self.send_command(json.dumps(msgdct)) 
-
-    def enable_ndi(self, en):
-        self._video_track.enable_ndi(en)
-
-    def set_video_track(self, track):
-        self._video_track = track
-
-    def set_audio_track(self, track):
-        self._audio_track = track
-
-    def video_sender(self):
-        senders = self.pc.getSenders()
-        vs = [s for s in senders if s.track and s.track.kind == "video"][0]
-        return vs
-
-    def audio_sender(self):
-        senders = self.pc.getSenders()
-        vs = [s for s in senders if s.track and s.track.kind == "audio"][0]
-        return vs
-
-    def video_track(self):
-        return self._video_track
-
-    def audio_track(self):
-        return self._audio_track
-
-    def unique_id(self):
-        return self.uniqid
-
-    def set_datachannel(self, dc):
-        self.datachannel = dc
-
-    def send_command(self, msg):
-        self.datachannel.send(msg)
-
-    def set_videotrack_for_identifier(self, iden):
-        try:
-            video_cl = ClientsCollection.client_for_id(iden)
-            self.video_sender().replaceTrack(video_cl.video_track())
-        except KeyError as err:
-            print("Key is not found:", iden)
-            ClientsCollection.anounce()
-        except:
-            print(traceback.format_exc())
-
-    def set_audiotrack_for_identifier(self, iden):
-        try:
-            cl = ClientsCollection.client_for_id(iden)
-            self.audio_sender().replaceTrack(cl.audio_track())
-        except KeyError as err:
-            print("Key is not found:", iden)
-            ClientsCollection.anounce()
-        except:
-            print(traceback.format_exc())
-
-    def on_command_message(self, msg):
-        print("ExternalCommand:", msg)
-        dct = json.loads(msg)
-        cmd  = dct["cmd"]
-        if cmd == "set_video":
-            self.set_videotrack_for_identifier(dct["identifier"])
-            self.set_audiotrack_for_identifier(dct["identifier"])
-        
-        if cmd == "chat_message":
-            ClientsCollection.send_chat_message(self.unique_id(), dct["data"])
-
-        if cmd == "ndi_enable":
-            self.enable_ndi(dct["state"] == "ON")
-
-    def anounce(self):
-        self.anounce_existance_video()
-
-    def anounce_existance_video(self):
-        idslist = ClientsCollection.identifier_list()
-        msgdct = {
-            "cmd" : "anounce_video_list",
-            "identifiers" : idslist 
-        }
-        self.send_command(json.dumps(msgdct)) 
 
 ROOT = os.path.dirname(__file__)
 
@@ -206,136 +38,6 @@ logger = logging.getLogger("pc")
 relay = MediaRelay()
 audio_relay = MediaRelay()
 
-class FlagVideoStreamTrack(VideoStreamTrack):
-    """
-    A video track that returns an animated flag.
-    """
-
-    def __init__(self, colors):
-        super().__init__()  # don't forget this!
-        self.counter = 0
-        height, width = 480, 640
-        self.label = "LABEL FLAG"
-
-        # generate flag
-        data_bgr = numpy.hstack(
-            [
-                self._create_rectangle(
-                    width=213, height=480, color=colors[0]
-                ),  # blue
-                self._create_rectangle(
-                    width=214, height=480, color=colors[1]
-                ),  # white
-                self._create_rectangle(width=213, height=480, color=colors[2]),  # red
-            ]
-        )
-
-        # shrink and center it
-        M = numpy.float32([[0.5, 0, width / 4], [0, 0.5, height / 4]])
-        data_bgr = cv2.warpAffine(data_bgr, M, (width, height))
-
-        # compute animation
-        omega = 2 * math.pi / height
-        id_x = numpy.tile(numpy.array(range(width), dtype=numpy.float32), (height, 1))
-        id_y = numpy.tile(
-            numpy.array(range(height), dtype=numpy.float32), (width, 1)
-        ).transpose()
-
-        self.frames = []
-        for k in range(30):
-            phase = 2 * k * math.pi / 30
-            map_x = id_x + 10 * numpy.cos(omega * id_x + phase)
-            map_y = id_y + 10 * numpy.sin(omega * id_x + phase)
-            self.frames.append(
-                VideoFrame.from_ndarray(
-                    cv2.remap(data_bgr, map_x, map_y, cv2.INTER_LINEAR), format="bgr24"
-                )
-            )
-
-    async def recv(self):
-        pts, time_base = await self.next_timestamp()
-
-        frame = self.frames[self.counter % 30]
-        frame.pts = pts
-        frame.time_base = time_base
-        self.counter += 1
-        return frame
-
-    def _create_rectangle(self, width, height, color):
-        data_bgr = numpy.zeros((height, width, 3), numpy.uint8)
-        data_bgr[:, :] = color
-        return data_bgr
-
-
-
-class VideoTransformTrack(MediaStreamTrack):
-    """
-    A video stream track that transforms frames from an another track.
-    """
-
-    kind = "video"
-
-    def __init__(self, track, transform):
-        super().__init__()  # don't forget this!
-        self.track = track
-        self.transform = transform
-        self.inited = False
-        self.ndi_enabled = False
-
-        #self.send_settings = ndi.SendCreate()
-        #self.send_settings.ndi_name = 'ndi-python'
-        #self.ndi_send = ndi.send_create(self.send_settings)
-        #self.ndi_video_frame = ndi.VideoFrameV2()
-
-    def enable_ndi(self, en):
-        self.ndi_enabled = en
-
-    async def recv(self):
-        if (not self.inited):
-            self.inited = True
-            print("VideoTransformTrack inited")
-
-        frame = await self.track.recv()
-        if (self.ndi_enabled):
-            img = frame.to_ndarray(format="bgr24")
-            #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
-            #self.ndi_video_frame.data = img
-            #self.ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
-            #ndi.send_send_video_v2(self.ndi_send, self.ndi_video_frame)
-        return frame
-
-
-class AudioTransformTrack(MediaStreamTrack):
-    """
-    A audio stream track that transforms frames from an another track.
-    """
-
-    kind = "audio"
-
-    def __init__(self, track):
-        super().__init__()  # don't forget this!
-        self.track = track
-
-    async def recv(self):
-        frame = await self.track.recv()
-        return frame
-
-class SilenceAudioStreamTrack(MediaStreamTrack):
-    """
-    A video stream track that returns a silent frame.
-    """
-
-    kind = "audio"
-
-    def __init__(self):
-        super().__init__()  # don't forget this!
-
-    async def recv(self):
-        audio = np.zeros((1, 2048), dtype=np.int16)
-        frame = AudioFrame.from_ndarray(audio, layout='mono', format='s16')
-        frame.sample_rate = 16000 # remember to set rate !
-        #frame.timestamp = 0
-        return frame
 
 async def index(request):
     f = codecs.open(os.path.join(ROOT, "assets/index.html"), "r", "utf-8")
@@ -363,9 +65,9 @@ def on_datachannel_handler(channel, pc, client):
     if channel.label == "server-message":
         SERVER_MESSAGE_LISTENERS.add(channel)
         client.set_datachannel(channel)
-        ClientsCollection.anounce()
+        ClientCollection.anounce()
         client.send_unique_id()
-        ClientsCollection.send_system_chat_message("Новый клиент")
+        ClientCollection.send_system_chat_message("Новый клиент")
 
         @channel.on("message")        
         def on_message(message):
@@ -395,7 +97,7 @@ async def offer(request):
     
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     client = Client(pc)
-    ClientsCollection.add_client(client)
+    ClientCollection.add_client(client)
 
     def log_info(msg, *args):
         logger.info(pc_id + " " + msg, *args)
@@ -417,8 +119,8 @@ async def offer(request):
         log_info("Connection state is %s", pc.connectionState)
         if pc.connectionState == "failed":
             await pc.close()
-            client = ClientsCollection.client_for_pc(pc)
-            ClientsCollection.discard(client)
+            client = ClientCollection.client_for_pc(pc)
+            ClientCollection.discard(client)
 
     recorder = MediaBlackhole()
     @pc.on("track")
@@ -471,9 +173,9 @@ async def offer(request):
 async def on_shutdown(app):
     # close peer connections
     print("SHUTDOWN")
-    coros = [cl.pc.close() for cl in ClientsCollection.clients]
+    coros = [cl.pc.close() for cl in ClientCollection.clients]
     await asyncio.gather(*coros)
-    ClientsCollection.clear()
+    ClientCollection.clear()
 
 async def main(cert_file, key_file):
     parser = argparse.ArgumentParser(
@@ -535,5 +237,10 @@ async def main(cert_file, key_file):
     #    sender_task
     )
 
+def set_interrupt_handler(handler):
+    signal.signal(signal.SIGINT, handler)
+    signal.signal(signal.SIGTERM, handler)
+
 if __name__ == "__main__":
+    set_interrupt_handler(lambda a,b: sys.exit(0))
     asyncio.run(main(cert_file="assets/cert.pem",key_file="assets/key.pem"))
