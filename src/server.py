@@ -82,19 +82,10 @@ def on_datachannel_handler(channel, pc, client):
 
 
 async def offer(request):
-    print("OFFER")
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    #iceServers = []
-    #iceServers.append(RTCIceServer('stun:stun.l.google.com:19302'))
-    #iceServers.append(RTCIceServer('stun:numb.viagenie.ca'))
-    #iceServers.append(RTCIceServer('turn:numb.viagenie.ca', username='username', credential='credential'))
-    #pc = RTCPeerConnection(RTCConfiguration(iceServers))
-    
     pc = RTCPeerConnection()
-    #pc.addIceCandidate(descr)
-    
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     client = Client(pc)
     ClientCollection.add_client(client)
@@ -110,8 +101,6 @@ async def offer(request):
     @pc.on("datachannel")
     def on_datachannel(channel):
         on_datachannel_handler(channel, pc, client)
-        #pc.addTrack(FlagVideoStreamTrack())
-    
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
@@ -130,9 +119,8 @@ async def offer(request):
             subscription_track = audio_relay.subscribe(track)
             newtrack = AudioTransformTrack(subscription_track) 
             client.set_audio_track(newtrack)
-
-            #newtrack = SilenceAudioStreamTrack()
             pc.addTrack(newtrack)
+
         elif track.kind == "video":        
             newtrack = VideoTransformTrack(
                     relay.subscribe(track, buffered=False), transform=params["video_transform"]
@@ -143,12 +131,42 @@ async def offer(request):
         async def on_ended():
             log_info("Track %s ended", track.kind)
 
-    
-    # handle offer
     await pc.setRemoteDescription(offer)
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
 
+    return web.Response(
+        content_type="application/json",
+        text=json.dumps(
+            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+        ),
+    )
 
-    # send answer
+async def offer_control(request):
+    params = await request.json()
+    offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+    
+    pc = RTCPeerConnection()    
+    pc_id = "PeerConnection(%s)" % uuid.uuid4()
+    client = Client(pc, admin=True)
+    ClientCollection.add_client(client)
+
+    def log_info(msg, *args):
+        logger.info(pc_id + " " + msg, *args)
+    
+    @pc.on("datachannel")
+    def on_datachannel(channel):
+        on_datachannel_handler(channel, pc, client)    
+
+    @pc.on("connectionstatechange")
+    async def on_connectionstatechange():
+        log_info("Connection state is %s", pc.connectionState)
+        if pc.connectionState == "failed":
+            await pc.close()
+            client = ClientCollection.client_for_pc(pc)
+            ClientCollection.discard(client)
+    
+    await pc.setRemoteDescription(offer)
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
@@ -212,6 +230,7 @@ async def main(cert_file, key_file):
     app_control.on_shutdown.append(on_shutdown)
     app_control.router.add_get("/", htmlfile("pannel/index.html"))
     app_control.router.add_get("/connection.js", javascript("pannel/connection.js"))
+    app_control.router.add_post("/offer", offer_control)
     
     web_server_task = web._run_app(
         app, 

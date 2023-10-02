@@ -12,8 +12,9 @@ def generate_uniqueid():
 
 
 class Client:
-    def __init__(self, pc):
+    def __init__(self, pc, admin=False):
         self.pc = pc
+        self.admin = admin
         self.uniqid = generate_uniqueid()
         self._video_track = None
 
