@@ -37,16 +37,20 @@ relay = MediaRelay()
 audio_relay = MediaRelay()
 
 
-async def index(request):
-    f = codecs.open(os.path.join(ROOT, "assets/index.html"), "r", "utf-8")
-    content = f.read()
-    return web.Response(content_type="text/html", text=content)
+def htmlfile(path):
+    async def foo(request):
+        f = codecs.open(os.path.join(ROOT, path), "r", "utf-8")
+        content = f.read()
+        return web.Response(content_type="text/html", text=content)
+    return foo
 
 
-async def javascript(request):
-    f = codecs.open(os.path.join(ROOT, "assets/client.js"), "r", "utf-8")
-    content = f.read()
-    return web.Response(content_type="application/javascript", text=content)
+def javascript(path):
+    async def foo(request):
+        f = codecs.open(os.path.join(ROOT, path), "r", "utf-8")
+        content = f.read()
+        return web.Response(content_type="application/javascript", text=content)
+    return foo
 
 async def stylefile(request):
     f = codecs.open(os.path.join(ROOT, "assets/main.css"), "r", "utf-8")
@@ -174,7 +178,9 @@ async def main(cert_file, key_file):
     parser.add_argument(
         "--port", type=int, default=8080, help="Port for HTTP server (default: 8080)"
     )
-    parser.add_argument("--record-to", help="Write received media to a file."),
+    parser.add_argument(
+        "--control-port", type=int, default=9080, help="Port for HTTP control pannel (default: 9080)"
+    )
     parser.add_argument("--verbose", "-v", action="count")
     args = parser.parse_args()
 
@@ -194,10 +200,18 @@ async def main(cert_file, key_file):
 
     app = web.Application()
     app.on_shutdown.append(on_shutdown)
-    app.router.add_get("/", index)
-    app.router.add_get("/client.js", javascript)
+    app.router.add_get("/", htmlfile("assets/index.html"))
+    app.router.add_get("/client.js", javascript("assets/client.js"))
+    app.router.add_get("/runtime.js", javascript("assets/runtime.js"))
+    app.router.add_get("/datachannel.js", javascript("assets/datachannel.js"))
+    app.router.add_get("/connection.js", javascript("assets/connection.js"))
     app.router.add_get("/main.css", stylefile)
     app.router.add_post("/offer", offer)
+
+    app_control = web.Application()
+    app_control.on_shutdown.append(on_shutdown)
+    app_control.router.add_get("/", htmlfile("pannel/index.html"))
+    app_control.router.add_get("/connection.js", javascript("pannel/connection.js"))
     
     web_server_task = web._run_app(
         app, 
@@ -207,8 +221,17 @@ async def main(cert_file, key_file):
         ssl_context=ssl_context
     )
 
+    web_server_control_pannel = web._run_app(
+        app_control, 
+        access_log=None, 
+        host=args.host, 
+        port=args.control_port, 
+        ssl_context=ssl_context
+    )
+
     await asyncio.gather(
-        web_server_task
+        web_server_task,
+        web_server_control_pannel
     )
 
 def set_interrupt_handler(handler):
