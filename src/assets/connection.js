@@ -28,7 +28,8 @@ function negotiate() {
             body: JSON.stringify({
                 sdp: offer.sdp,
                 type: offer.type,
-                video_transform:  "none"
+                video_transform:  "none",
+                myid: document.getElementById("username").value,
             }),
             headers: {
                 'Content-Type': 'application/json'
