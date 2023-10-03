@@ -5,20 +5,13 @@ import logging
 import os
 import ssl
 import uuid
-import traceback
 import codecs
 import sys
-import threading
-import cv2
-import numpy
 import signal
-import math
-import aiohttp
 from aiohttp import web
-import aiortc
 from av import AudioFrame, VideoFrame
-from aiortc import MediaStreamTrack, VideoStreamTrack, RTCIceServer, RTCConfiguration, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaBlackhole, MediaRelay
 
 
 from client_collection import ClientCollection
