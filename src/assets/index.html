@@ -16,7 +16,7 @@
         <audio id="audio2" autoplay="true"></audio>
         <span>Local video:</span>
 
-        <video id="video2" muted autoplay="true" width="640" height="480" playsinline="true"></video>
+        <video id="video2" muted autoplay="true" width="320" height="240" playsinline="true"></video>
     </div>
 
     <div>
@@ -53,10 +53,12 @@
 
     <div id="remote_section" style="display:none">
         <span>Remote video:</span>
-        <div>Выбор источника:<select id="select_video_cb"></select></div>
-        <button id="command" onclick="command()">Запросить</button>
-        <video id="video" autoplay="true" width="640" height="480" playsinline="true"></video>
-        <!--/div>-->
+
+        <div>
+            <div>Выбор источника:<select id="select_video_cb"></select></div>
+            <button id="command" onclick="command()">Запросить</button>
+            <video id="video" autoplay="true" width="320" height="240" playsinline="true"></video>
+        </div>
 
         <h2>Чат:</h2>
         <div>
@@ -72,10 +74,14 @@
         <div id="server-panel"></div>
     </div>
 
+    <div id="remote_sources">
+    </div>
+
     <script src="client.js"></script>
     <script src="runtime.js"></script>
     <script src="datachannel.js"></script>
     <script src="connection.js"></script>
+    <script src="remote_sources.js"></script>
 </body>
 
 </html>

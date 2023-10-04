@@ -224,6 +224,8 @@ async def main():
     app.router.add_get("/runtime.js", javascript("assets/runtime.js"))
     app.router.add_get("/datachannel.js", javascript("assets/datachannel.js"))
     app.router.add_get("/connection.js", javascript("assets/connection.js"))
+    app.router.add_get("/remote_sources.js",
+                       javascript("assets/remote_sources.js"))
     app.router.add_get("/main.css", stylefile)
     app.router.add_post("/offer", offer)
 
