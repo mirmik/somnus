@@ -27,6 +27,6 @@ function add_remote_source_panel()
     div.appendChild(video)
 }
 
-add_remote_source_panel() 
-add_remote_source_panel() 
-add_remote_source_panel() 
+// add_remote_source_panel() 
+// add_remote_source_panel() 
+// add_remote_source_panel() 
