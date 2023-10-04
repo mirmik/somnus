@@ -26,6 +26,11 @@ video {
     flex-direction: row;
 }
 
+.rowdiv {
+    display: flex;
+    flex-direction: row;
+}
+
 .remote_source {
     display: flex;
     width: 100%;

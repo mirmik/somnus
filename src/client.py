@@ -3,6 +3,7 @@ import traceback
 from client_collection import ClientCollection
 import json
 import asyncio
+from aiortc.contrib.media import MediaBlackhole, MediaRelay
 
 IDCOUNTER = 0
 def generate_uniqueid():
@@ -41,6 +42,14 @@ class Client:
 
     def set_video_track(self, track):
         self._video_track = track
+        self.black_hole = MediaBlackhole()
+        self.black_hole.addTrack(track)
+        self.black_hole_task = self.black_hole.start()
+        asyncio.ensure_future(self.black_hole_task)
+
+    def disable_black_hole(self):
+        #self.black_hole_task.cancel()
+        asyncio.ensure_future(self.black_hole.stop())
 
     def set_audio_track(self, track):
         self._audio_track = track
@@ -80,6 +89,7 @@ class Client:
                 print("Client is admin:", iden)
                 return
             self.video_sender().replaceTrack(video_cl.video_track())
+            video_cl.disable_black_hole()
         except KeyError as err:
             print("Key is not found:", iden)
             ClientCollection.anounce()

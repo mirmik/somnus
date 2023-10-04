@@ -51,10 +51,6 @@ async def stylefile(request):
     content = f.read()
     return web.Response(content_type="text/css", text=content)
 
-rgb_flag = FlagVideoStreamTrack(
-    [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
-)
-
 
 def on_datachannel_handler(channel, pc, client):
     if channel.label == "server-message":
@@ -91,11 +87,20 @@ async def offer(request):
     def log_info(msg, *args):
         logger.info(pc_id + " " + msg, *args)
 
-    flag_track = FlagVideoStreamTrack(
+    flag_track1 = FlagVideoStreamTrack(
         [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
     )
-    flag_sender = pc.addTrack(flag_track)
+    sender1 = pc.addTrack(flag_track1)
+    video_track1 = sender1.track
+    print("video_track.id: ", video_track1.id)
 
+    flag_track2 = FlagVideoStreamTrack(
+        [(0, 255, 255), (255, 0, 255), (255, 255, 0)]
+    )
+    sender2 = pc.addTrack(flag_track2)
+    video_track2 = sender2.track
+    print("video_track.id: ", video_track2.id)
+    
     @pc.on("datachannel")
     def on_datachannel(channel):
         on_datachannel_handler(channel, pc, client)
@@ -107,8 +112,6 @@ async def offer(request):
             await pc.close()
             client = ClientCollection.client_for_pc(pc)
             ClientCollection.discard(client)
-
-    recorder = MediaBlackhole()
 
     @pc.on("track")
     def on_track(track):
@@ -134,6 +137,7 @@ async def offer(request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
+    print("answer.sdp: ", answer.sdp)
     return web.Response(
         content_type="application/json",
         text=json.dumps(

@@ -46,12 +46,17 @@ function negotiate() {
     });
 }
 
+var i = 0
+
 function createPeerConnection(use_ice_server) {
     var config = {
         sdpSemantics: 'unified-plan',
     }; 
     if (use_ice_server) 
-        config.iceServers = [{url:'stun:stun.l.google.com:19302'},
+        config.iceServers = [    
+        {url:'stun:stun3.l.google.com:19302'},
+        {url:'stun:stun.voipbuster.com'},
+        {url:'stun:stun4.l.google.com:19302'},
     ]
 
     pc = new RTCPeerConnection(config);
@@ -69,12 +74,19 @@ function createPeerConnection(use_ice_server) {
     }, false);
 
     pc.addEventListener('track', function(evt) {
-        console.log("TRACK")
-        console.log(evt)
         if (evt.track.kind == 'video')
         {
-            console.log("VIDEO TRACK")
-            document.getElementById('video').srcObject = evt.streams[0];
+            if (i == 0)
+            {      
+                document.getElementById("video").srcObject = evt.streams[0];
+                i = 1;
+            }
+            else  if (i == 1)
+            {
+                document.getElementById("video").srcObject = new MediaStream([evt.streams[0].getTracks()[2]]);
+                document.getElementById("video_n").srcObject = new MediaStream([evt.streams[0].getTracks()[1]]);
+                i = 0;
+            }
         }
         else
         {
