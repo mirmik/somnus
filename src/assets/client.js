@@ -166,6 +166,8 @@ function open_local_media()
             video: true
         };
         navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
+            getCameraSelection();
+            getMicrophoneSelection();
             document.getElementById('video2').srcObject = stream;
             STREAM = stream;
             audio_amplitude();
@@ -177,4 +179,94 @@ function open_local_media()
     }
 }
 
+function videoinput_change() 
+{
+    cameraOptions = document.getElementById("video_id")
+    text = cameraOptions.options[cameraOptions.selectedIndex].text
+    console.log(text)
+
+    deviceId = cameraOptions.options[cameraOptions.selectedIndex].value
+
+    // choose video device
+    constraints = {
+        video: {
+            deviceId: { exact: deviceId }
+        }
+    }
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
+        document.getElementById('video2').srcObject = stream;
+        STREAM = stream;
+        //SENDERS.forEach((sender) => {
+        //    sender.replaceTrack(stream.getVideoTracks()[0])
+        //})
+        update_resolution_state()
+    });
+}
+
+function audioinput_change() 
+{
+    cameraOptions = document.getElementById("audio_id")
+    text = cameraOptions.options[cameraOptions.selectedIndex].text
+    console.log(text)
+
+    deviceId = cameraOptions.options[cameraOptions.selectedIndex].value
+
+    // choose video device
+    constraints = {
+        video: {
+            deviceId: { exact: deviceId }
+        }
+    }
+    //navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
+        //document.getElementById('2').srcObject = stream;
+        //STREAM = stream;
+        //SENDERS.forEach((sender) => {
+        //    sender.replaceTrack(stream.getVideoTracks()[0])
+        //})
+        //update_resolution_state()
+    //});
+}
+
+// navigator.permissions.query({ name: "camera" }).then((result) => {
+//     if (result.state === "granted") {
+//         console.log("granted")
+//     } else if (result.state === "prompt") {
+//         console.log("prompt")
+//     }
+//   });
+
+const getCameraSelection = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    const options = videoDevices.map(videoDevice => {
+      return `<option value="${videoDevice.deviceId}">${videoDevice.label}</option>`;
+    });
+    cameraOptions = document.getElementById("video_id")
+    cameraOptions.innerHTML = options.join('');
+  };
+
+  const getMicrophoneSelection = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'audioinput');
+    const options = videoDevices.map(videoDevice => {
+      return `<option value="${videoDevice.deviceId}">${videoDevice.label}</option>`;
+    });
+    microphoneOptions = document.getElementById("audio_id")
+    microphoneOptions.innerHTML = options.join('');
+  };
+
+
 open_local_media()
+
+
+// nosleep
+// var noSleep = new NoSleep();
+
+// function enableNoSleep() {
+//   noSleep.enable();
+//   document.removeEventListener('touchstart', enableNoSleep, false);
+// }
+
+// // Enable wake lock.
+// // (must be wrapped in a user input event handler e.g. a mouse or touch handler)
+// document.addEventListener('touchstart', enableNoSleep, false);

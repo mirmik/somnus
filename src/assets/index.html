@@ -15,7 +15,7 @@
     <div id="local_section">
         <audio id="audio_play" autoplay="true"></audio>
         <span>Local video:</span>
-
+        
         <video id="video2" muted autoplay="true" width="320" height="240" playsinline="true"></video>
     </div>
 
@@ -24,6 +24,12 @@
         <span id="audio-amplitude">0</span>
     </div>
     <div>
+        <div><span>Выбор камеры:</span>
+        <select id="video_id" onchange="videoinput_change()"></select></div>
+        
+        <div><span>Выбор микрофона:</span>
+            <select id="audio_id" onchange="audioinput_change()"></select></div>
+
         <span>Разрешение видео:</span>
         <select id="resolutions" onchange="change_resolution_button()"></select>
         <span id="resolution_state">resolution_state</span>
