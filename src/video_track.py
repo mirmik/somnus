@@ -7,7 +7,7 @@ from av import VideoFrame
 import json
 import numpy as np
 import cv2 as cv
-import NDIlib as ndi
+#import NDIlib as ndi
 
 class VideoTransformTrack(MediaStreamTrack):
     """
