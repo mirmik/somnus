@@ -13,7 +13,7 @@
     <span id="errorlog" STYLE="font-size:24px">ОК</span>
     <h2>Контрольная панель клиента:</h2>
     <div id="local_section">
-        <audio id="audio2" autoplay="true"></audio>
+        <audio id="audio_play" autoplay="true"></audio>
         <span>Local video:</span>
 
         <video id="video2" muted autoplay="true" width="320" height="240" playsinline="true"></video>
@@ -58,12 +58,15 @@
             <div>Выбор источника:<select id="select_video_cb"></select></div>
             <button id="command" onclick="command()">Запросить</button>
             <div class = "rowdiv">
-                <video id="video" autoplay="true" width="320" height="240" playsinline="true"></video>
+                <video id="video" muted autoplay="true" width="320" height="240" playsinline="true"></video>
                 <!--2<video id="video_n" autoplay="true" width="320" height="240" playsinline="true"></video>
                 3<video id="video_nn" autoplay="true" width="320" height="240" playsinline="true"></video>
                 -->
             </div>
         </div>
+
+        <button id="disable_sound" onclick="disable_sound_play()">Отключить проигрывание звука</button>
+        <button id="enable_sound" onclick="enable_sound_play()">Включить проигрывание звука</button>
 
         <h2>Чат:</h2>
         <div>

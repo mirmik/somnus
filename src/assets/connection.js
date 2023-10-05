@@ -1,4 +1,4 @@
-
+AUDIO_STREAM = null
 
 function negotiate() {
     pc.addTransceiver('video', {direction: 'recvonly'});
@@ -91,9 +91,23 @@ function createPeerConnection(use_ice_server) {
         else
         {
             console.log("AUDIO TRACK")
-            document.getElementById('audio2').srcObject = evt.streams[0];
+            document.getElementById('audio_play').srcObject = evt.streams[0];
+            AUDIO_STREAM = evt.streams[0];
         }
     });
 
     return pc;
+}
+
+function disable_sound_play()
+{
+    console.log("disable_sound_play")
+    document.getElementById('audio_play').srcObject = null;
+    document.getElementById('audio_play').pause();
+}
+
+function enable_sound_play()
+{
+    console.log("enable_sound_play")
+    document.getElementById('audio_play').srcObject = AUDIO_STREAM;
 }
