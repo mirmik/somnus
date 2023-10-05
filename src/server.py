@@ -94,12 +94,12 @@ async def offer(request):
     video_track1 = sender1.track
     print("video_track.id: ", video_track1.id)
 
-    flag_track2 = FlagVideoStreamTrack(
-        [(0, 255, 255), (255, 0, 255), (255, 255, 0)]
-    )
-    sender2 = pc.addTrack(flag_track2)
-    video_track2 = sender2.track
-    print("video_track.id: ", video_track2.id)
+    # flag_track2 = FlagVideoStreamTrack(
+    #     [(0, 255, 255), (255, 0, 255), (255, 255, 0)]
+    # )
+    # sender2 = pc.addTrack(flag_track2)
+    # video_track2 = sender2.track
+    # print("video_track.id: ", video_track2.id)
     
     @pc.on("datachannel")
     def on_datachannel(channel):

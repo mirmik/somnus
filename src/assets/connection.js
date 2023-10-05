@@ -76,17 +76,17 @@ function createPeerConnection(use_ice_server) {
     pc.addEventListener('track', function(evt) {
         if (evt.track.kind == 'video')
         {
-            if (i == 0)
-            {      
+            // if (i == 0)
+            // {      
                 document.getElementById("video").srcObject = evt.streams[0];
-                i = 1;
-            }
-            else  if (i == 1)
-            {
-                document.getElementById("video").srcObject = new MediaStream([evt.streams[0].getTracks()[2]]);
-                document.getElementById("video_n").srcObject = new MediaStream([evt.streams[0].getTracks()[1]]);
-                i = 0;
-            }
+            //     i = 1;
+            // }
+            // else  if (i == 1)
+            // {
+            //     document.getElementById("video").srcObject = new MediaStream([evt.streams[0].getTracks()[2]]);
+            //     document.getElementById("video_n").srcObject = new MediaStream([evt.streams[0].getTracks()[1]]);
+            //     i = 0;
+            // }
         }
         else
         {
