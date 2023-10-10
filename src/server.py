@@ -12,8 +12,6 @@ from aiohttp import web
 from av import AudioFrame, VideoFrame
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaRelay
-
-
 from client_collection import ClientCollection
 from audio_track import AudioTransformTrack, SilenceAudioStreamTrack
 from video_track import VideoTransformTrack, FlagVideoStreamTrack
@@ -100,7 +98,7 @@ async def offer(request):
     # sender2 = pc.addTrack(flag_track2)
     # video_track2 = sender2.track
     # print("video_track.id: ", video_track2.id)
-    
+
     @pc.on("datachannel")
     def on_datachannel(channel):
         on_datachannel_handler(channel, pc, client)

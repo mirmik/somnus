@@ -7,7 +7,8 @@ from av import VideoFrame
 import json
 import numpy as np
 import cv2 as cv
-#import NDIlib as ndi
+import NDIlib as ndi
+
 
 class VideoTransformTrack(MediaStreamTrack):
     """
@@ -46,7 +47,6 @@ class VideoTransformTrack(MediaStreamTrack):
         return frame
 
 
-
 class FlagVideoStreamTrack(VideoStreamTrack):
     """
     A video track that returns an animated flag.
@@ -67,7 +67,8 @@ class FlagVideoStreamTrack(VideoStreamTrack):
                 self._create_rectangle(
                     width=214, height=480, color=colors[1]
                 ),  # white
-                self._create_rectangle(width=213, height=480, color=colors[2]),  # red
+                self._create_rectangle(
+                    width=213, height=480, color=colors[2]),  # red
             ]
         )
 
@@ -77,7 +78,8 @@ class FlagVideoStreamTrack(VideoStreamTrack):
 
         # compute animation
         omega = 2 * math.pi / height
-        id_x = numpy.tile(numpy.array(range(width), dtype=numpy.float32), (height, 1))
+        id_x = numpy.tile(numpy.array(
+            range(width), dtype=numpy.float32), (height, 1))
         id_y = numpy.tile(
             numpy.array(range(height), dtype=numpy.float32), (width, 1)
         ).transpose()
