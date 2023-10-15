@@ -2,6 +2,7 @@ AUDIO_STREAM = null
 
 function negotiate() {
     pc.addTransceiver('video', {direction: 'recvonly'});
+    pc.addTransceiver('video', {direction: 'recvonly'});
     return pc.createOffer().then(function(offer) {
         return pc.setLocalDescription(offer);
     }).then(function() {
@@ -76,17 +77,24 @@ function createPeerConnection(use_ice_server) {
     pc.addEventListener('track', function(evt) {
         if (evt.track.kind == 'video')
         {
-            // if (i == 0)
-            // {      
-                document.getElementById("video").srcObject = evt.streams[0];
-            //     i = 1;
-            // }
-            // else  if (i == 1)
-            // {
-            //     document.getElementById("video").srcObject = new MediaStream([evt.streams[0].getTracks()[2]]);
-            //     document.getElementById("video_n").srcObject = new MediaStream([evt.streams[0].getTracks()[1]]);
-            //     i = 0;
-            // }
+             if (i == 0)
+             {      
+                 i = 1;
+                 set_video_to_remote_source(0, evt.streams[0])
+            }
+            else  if (i == 1)
+            {
+                i = 2;
+                set_video_to_remote_source(0, new MediaStream([evt.streams[0].getTracks()[2]]))
+                set_video_to_remote_source(1, new MediaStream([evt.streams[0].getTracks()[1]]))
+            }
+            else  if (i == 2)
+            {
+                i = 0;
+                set_video_to_remote_source(0, new MediaStream([evt.streams[0].getTracks()[3]]))
+                set_video_to_remote_source(1, new MediaStream([evt.streams[0].getTracks()[2]]))
+                set_video_to_remote_source(2, new MediaStream([evt.streams[0].getTracks()[1]]))
+            }
         }
         else
         {

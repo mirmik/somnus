@@ -24,9 +24,8 @@ REMOTE_TRACKS = list()
 ROOT = os.path.dirname(__file__)
 
 logger = logging.getLogger("pc")
-relay = MediaRelay()
-audio_relay = MediaRelay()
 
+#logging.basicConfig(level=logging.DEBUG)
 
 def htmlfile(path):
     async def foo(request):
@@ -71,11 +70,14 @@ def on_datachannel_handler(channel, pc, client):
 
 async def offer(request):
     params = await request.json()
+    #print("OFFER:")
+    #print("params: ", params)
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
     # get argument 'id' from request
     myid = params["myid"]
     print("myid: ", myid)
+    print("type: ",  params["type"])
 
     pc = RTCPeerConnection()
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
@@ -85,20 +87,21 @@ async def offer(request):
     def log_info(msg, *args):
         logger.info(pc_id + " " + msg, *args)
 
-    flag_track1 = FlagVideoStreamTrack(
-        [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
-    )
-    sender1 = pc.addTrack(flag_track1)
-    video_track1 = sender1.track
-    print("video_track.id: ", video_track1.id)
-
-    # flag_track2 = FlagVideoStreamTrack(
-    #     [(0, 255, 255), (255, 0, 255), (255, 255, 0)]
-    # )
-    # sender2 = pc.addTrack(flag_track2)
-    # video_track2 = sender2.track
-    # print("video_track.id: ", video_track2.id)
-
+    pc.addTransceiver("video")
+    pc.addTransceiver("video")
+    pc.addTransceiver("video")
+    pc.addTransceiver("audio") 
+    sender1 = pc.addTrack(FlagVideoStreamTrack([(255, 0, 0), (0, 255, 0), (0, 0, 255)]))
+    sender2 = pc.addTrack(FlagVideoStreamTrack([(0, 255, 0), (255, 0, 0), (0, 0, 125)]))
+    sender3 = pc.addTrack(FlagVideoStreamTrack([(0, 255, 255), (255, 0, 0), (0, 0, 125)]))
+    client.set_video_senders([sender1, sender2, sender3])
+   
+    sender1 = pc.addTrack(SilenceAudioStreamTrack())
+    #sender2 = pc.addTrack(SilenceAudioStreamTrack())
+    client.set_audio_senders([sender1])
+    # video sender id
+    #print("video sender id: ", sender1.id)
+    
     @pc.on("datachannel")
     def on_datachannel(channel):
         on_datachannel_handler(channel, pc, client)
@@ -116,14 +119,14 @@ async def offer(request):
         log_info("Track %s received", track.kind)
 
         if track.kind == "audio":
-            subscription_track = audio_relay.subscribe(track)
-            newtrack = AudioTransformTrack(subscription_track)
+            newtrack = AudioTransformTrack(
+                client.audio_relay.subscribe(track)
+            )
             client.set_audio_track(newtrack)
-            pc.addTrack(newtrack)
 
         elif track.kind == "video":
             newtrack = VideoTransformTrack(
-                relay.subscribe(track, buffered=False), transform=params["video_transform"]
+                client.relay.subscribe(track, buffered=False), transform=params["video_transform"]
             )
             client.set_video_track(newtrack)
 
@@ -135,7 +138,6 @@ async def offer(request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
-    print("answer.sdp: ", answer.sdp)
     return web.Response(
         content_type="application/json",
         text=json.dumps(

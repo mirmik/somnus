@@ -1,27 +1,19 @@
 function disable_camera()
 {
-    STREAM.getVideoTracks().forEach(function(track) {
-        track.enabled = false;
-    });
+    VIDEO_TRACK.enabled = false;
 }
 
 function enable_camera()
 {
-    STREAM.getVideoTracks().forEach(function(track) {
-        track.enabled = true;
-    });
+    VIDEO_TRACK.enabled = true;
 }
 
 function disable_mic() {
-    STREAM.getAudioTracks().forEach(function(track) {
-        track.enabled = false;
-    });
+    AUDIO_TRACK.enabled = false;
 }
 
 function enable_mic() {
-    STREAM.getAudioTracks().forEach(function(track) {
-        track.enabled = true;
-    });
+    AUDIO_TRACK.enabled = true;
 }
 
 function change_resolution(w, h)
@@ -53,11 +45,11 @@ function get_resolution()
 }
 
 
-function audio_amplitude() {
-    audio_signal = STREAM.getAudioTracks()[0]
+function audio_amplitude(stream) {
+    audio_signal = stream.getAudioTracks()[0]
     audio_ctx = new AudioContext();
     analyser = audio_ctx.createAnalyser();
-    microphone = audio_ctx.createMediaStreamSource(STREAM);
+    microphone = audio_ctx.createMediaStreamSource(stream);
     javascriptNode = audio_ctx.createScriptProcessor(2048, 1, 1);
     
     analyser.smoothingTimeConstant = 0.8;

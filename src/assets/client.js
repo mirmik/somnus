@@ -2,6 +2,14 @@ var pc = null;
 var STREAM = null
 var SENDERS = null
 
+var VIDEO_TRACK = null
+var AUDIO_TRACK = null
+var REMOTE_STREAM = null
+var REMOTE_VIDEO_TRACK = null
+var REMOTE_AUDIO_TRACK = null
+var REMOTE_VIDEO_SENDER = null
+var REMOTE_AUDIO_SENDER = null
+
 var Resolutions = [
     {width: 160, height:120},
     {width: 320, height:180},
@@ -36,16 +44,6 @@ function current_stamp() {
     } else {
         return new Date().getTime() - time_start;
     }
-}
-
-function command()
-{
-    cb = document.getElementById("select_video_cb")
-    dct = {
-        "cmd" : "set_video",
-        "identifier" : cb.options[cb.selectedIndex].text
-    }
-    send_command(JSON.stringify(dct))
 }
 
 function control_panel_declare_list(lst) {
@@ -96,14 +94,28 @@ function control_panel_declare_list(lst) {
 }
 
 
-function add_media_tracks_to_connection(stream) 
+function add_media_tracks_to_connection(pc, video_track, audio_track) 
 {
     senders = []
-    stream.getTracks().forEach(function(track) {
-        sender = pc.addTrack(track, stream);
-        senders.push(sender)
-    });
+    REMOTE_VIDEO_SENDER = pc.addTrack(video_track)
+    REMOTE_AUDIO_SENDER = pc.addTrack(audio_track)
+    senders.push(REMOTE_VIDEO_SENDER)
+    senders.push(REMOTE_AUDIO_SENDER)
+    REMOTE_VIDEO_TRACK = video_track
+    REMOTE_AUDIO_TRACK = audio_track
     return senders
+}
+
+function replace_remote_video_track(track)
+{
+    REMOTE_VIDEO_SENDER.replaceTrack(track)
+    REMOTE_VIDEO_TRACK = track
+}
+
+function replace_remote_audio_track(track)
+{
+    REMOTE_AUDIO_SENDER.replaceTrack(track)
+    REMOTE_AUDIO_TRACK = track
 }
 
 function start_connection() 
@@ -115,10 +127,13 @@ function start_connection()
         
         add_datachannel_for_connection(pc)
 
-        SENDERS = add_media_tracks_to_connection(STREAM);
+        SENDERS = add_media_tracks_to_connection(pc, VIDEO_TRACK, AUDIO_TRACK)
         negotiate().then(function() {
             document.getElementById('remote_section').style.display = 'inline-block';
         });
+        add_remote_source_panel() 
+        add_remote_source_panel() 
+        add_remote_source_panel() 
 
         // disable connection control elements
         document.getElementById('connection_section').style.display = 'none';
@@ -149,7 +164,7 @@ function change_resolution_button()
 
 function error_state(exception)
 {
-    document.getElementById('errorlog').textContent = exception
+    document.getElementById('errorlog').textContent = JSON.stringify(exception)
     console.log(exception)
 }
 
@@ -165,14 +180,22 @@ function open_local_media()
             audio: true,
             video: true
         };
-        navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
+        task = navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
             getCameraSelection();
             getMicrophoneSelection();
             document.getElementById('video2').srcObject = stream;
             STREAM = stream;
-            audio_amplitude();
+            audio_amplitude(stream);
             update_resolution_state()
+
+            STREAM.getVideoTracks().forEach(function(track) {
+                VIDEO_TRACK = track;
+            } );
+            STREAM.getAudioTracks().forEach(function(track) {
+                AUDIO_TRACK = track;
+            } );
         });  
+        return task
     }
     catch (e) {
         error_state(e)
@@ -181,59 +204,60 @@ function open_local_media()
 
 function videoinput_change() 
 {
+    VIDEO_TRACK.stop()
+    
     cameraOptions = document.getElementById("video_id")
     text = cameraOptions.options[cameraOptions.selectedIndex].text
     console.log(text)
 
     deviceId = cameraOptions.options[cameraOptions.selectedIndex].value
 
+    error_state(deviceId)
     // choose video device
     constraints = {
         video: {
-            deviceId: { exact: deviceId }
+            deviceId: { exact: deviceId },
         }
     }
     navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
         document.getElementById('video2').srcObject = stream;
         STREAM = stream;
-        //SENDERS.forEach((sender) => {
-        //    sender.replaceTrack(stream.getVideoTracks()[0])
-        //})
         update_resolution_state()
+
+        STREAM.getVideoTracks().forEach(function(track) {
+            VIDEO_TRACK = track;
+        } );
+
+        replace_remote_video_track(VIDEO_TRACK)
     });
 }
 
 function audioinput_change() 
 {
+    AUDIO_TRACK.stop()
+    console.log("audioinput_change")
     cameraOptions = document.getElementById("audio_id")
     text = cameraOptions.options[cameraOptions.selectedIndex].text
     console.log(text)
 
     deviceId = cameraOptions.options[cameraOptions.selectedIndex].value
+    console.log(deviceId)
 
     // choose video device
     constraints = {
-        video: {
+        audio: {
             deviceId: { exact: deviceId }
         }
     }
-    //navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
-        //document.getElementById('2').srcObject = stream;
-        //STREAM = stream;
-        //SENDERS.forEach((sender) => {
-        //    sender.replaceTrack(stream.getVideoTracks()[0])
-        //})
-        //update_resolution_state()
-    //});
-}
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) { 
+        audio_amplitude(stream)
+        stream.getAudioTracks().forEach(function(track) {
+            AUDIO_TRACK = track;
+        } );
 
-// navigator.permissions.query({ name: "camera" }).then((result) => {
-//     if (result.state === "granted") {
-//         console.log("granted")
-//     } else if (result.state === "prompt") {
-//         console.log("prompt")
-//     }
-//   });
+        replace_remote_audio_track(AUDIO_TRACK)
+    });
+}
 
 const getCameraSelection = async () => {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -251,6 +275,7 @@ const getCameraSelection = async () => {
     const options = videoDevices.map(videoDevice => {
       return `<option value="${videoDevice.deviceId}">${videoDevice.label}</option>`;
     });
+    error_state(options)
     microphoneOptions = document.getElementById("audio_id")
     microphoneOptions.innerHTML = options.join('');
   };

@@ -59,17 +59,7 @@
 
     <div id="remote_section" style="display:none">
         <span>Remote video:</span>
-
-        <div>
-            <div>Выбор источника:<select id="select_video_cb"></select></div>
-            <button id="command" onclick="command()">Запросить</button>
-            <div class = "rowdiv">
-                <video id="video" muted autoplay="true" width="320" height="240" playsinline="true"></video>
-                <!--2<video id="video_n" autoplay="true" width="320" height="240" playsinline="true"></video>
-                3<video id="video_nn" autoplay="true" width="320" height="240" playsinline="true"></video>
-                -->
-            </div>
-        </div>
+        <div id="remote_sources" class = "rowdiv"> </div>
 
         <button id="disable_sound" onclick="disable_sound_play()">Отключить проигрывание звука</button>
         <button id="enable_sound" onclick="enable_sound_play()">Включить проигрывание звука</button>
@@ -87,8 +77,6 @@
         <h2>Контрольная панель сервера:</h2>
         <div id="server-panel"></div>
     </div>
-
-    <div id="remote_sources">
     </div>
 
     <script src="client.js"></script>

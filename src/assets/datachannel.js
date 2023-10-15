@@ -15,6 +15,11 @@ function add_datachannel_for_connection(pc)
     DATACHANNEL = server_mc
 }
 
+function announce_video_list(identifiers)
+{
+    set_remote_identifiers_to_comboboxes(identifiers)
+}
+
 function on_command_message(evt) 
 {
     dct = JSON.parse(evt.data)
@@ -23,14 +28,7 @@ function on_command_message(evt)
     
     if (cmd == "anounce_video_list") 
     {
-        cb = document.getElementById("select_video_cb")
-        while (cb.options.length > 0) {                
-            cb.remove(0);
-        }  
-        console.log(cb.options)
-        dct.identifiers.forEach((i) => {
-            cb.options.add(new Option(i))
-        })
+        announce_video_list(dct.identifiers)
         control_panel_declare_list(dct.identifiers)
     }
 

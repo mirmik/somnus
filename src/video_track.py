@@ -55,20 +55,20 @@ class FlagVideoStreamTrack(VideoStreamTrack):
     def __init__(self, colors):
         super().__init__()  # don't forget this!
         self.counter = 0
-        height, width = 480, 640
+        height, width = 240, 320
         self.label = "LABEL FLAG"
 
         # generate flag
         data_bgr = numpy.hstack(
             [
                 self._create_rectangle(
-                    width=213, height=480, color=colors[0]
+                    width=213//2, height=480//2, color=colors[0]
                 ),  # blue
                 self._create_rectangle(
-                    width=214, height=480, color=colors[1]
+                    width=214//2, height=480//2, color=colors[1]
                 ),  # white
                 self._create_rectangle(
-                    width=213, height=480, color=colors[2]),  # red
+                    width=213//2, height=480//2, color=colors[2])
             ]
         )
 
