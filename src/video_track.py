@@ -24,10 +24,10 @@ class VideoTransformTrack(MediaStreamTrack):
         self.inited = False
         self.ndi_enabled = False
 
-        #self.send_settings = ndi.SendCreate()
-        #self.send_settings.ndi_name = 'ndi-python'
-        #self.ndi_send = ndi.send_create(self.send_settings)
-        #self.ndi_video_frame = ndi.VideoFrameV2()
+        self.send_settings = ndi.SendCreate()
+        self.send_settings.ndi_name = 'ndi-python'
+        self.ndi_send = ndi.send_create(self.send_settings)
+        self.ndi_video_frame = ndi.VideoFrameV2()
 
     def enable_ndi(self, en):
         self.ndi_enabled = en
@@ -40,10 +40,10 @@ class VideoTransformTrack(MediaStreamTrack):
         frame = await self.track.recv()
         if (self.ndi_enabled):
             img = frame.to_ndarray(format="bgr24")
-            #img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
-            #self.ndi_video_frame.data = img
-            #self.ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
-            #ndi.send_send_video_v2(self.ndi_send, self.ndi_video_frame)
+            img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
+            self.ndi_video_frame.data = img
+            self.ndi_video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
+            ndi.send_send_video_v2(self.ndi_send, self.ndi_video_frame)
         return frame
 
 
